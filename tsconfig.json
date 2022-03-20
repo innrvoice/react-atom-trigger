@@ -1,0 +1,30 @@
+{
+  "include": ["src"],
+  "exclude": ["**/node_modules", "**/lib"],
+  "compilerOptions": {
+    "declaration": true,
+    "declarationDir": "lib",
+    "rootDir": "src",
+    "experimentalDecorators": true,
+    "lib": ["dom", "esnext"],
+    "jsx": "react",
+    "allowSyntheticDefaultImports": true,
+    "emitDecoratorMetadata": false,
+    "esModuleInterop": true,
+    "module": "es6",
+    "moduleResolution": "node",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "pretty": true,
+    "removeComments": true,
+    "sourceMap": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "stripInternal": true,
+    "target": "es5"
+  }
+}

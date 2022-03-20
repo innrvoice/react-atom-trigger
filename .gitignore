@@ -1,0 +1,5 @@
+.vscode/*
+!.vscode/launch.json
+yarn-error.log
+node_modules
+lib
