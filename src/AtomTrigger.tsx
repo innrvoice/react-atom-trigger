@@ -20,7 +20,7 @@ export interface IAtomTriggerProps {
   triggerOnce?: boolean;
   name?: string;
   className?: string;
-  windowDimensions: Dimensions | null;
+  dimensions: Dimensions | null;
   offset?: [number, number, number, number];
 }
 
@@ -32,7 +32,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
   name,
   className,
   behavior = 'default',
-  windowDimensions,
+  dimensions,
   offset = [0, 0, 0, 0],
 }) => {
   const atomTriggerRef = React.useRef<HTMLDivElement>(null);
@@ -47,25 +47,25 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
   });
 
   React.useLayoutEffect(() => {
-    if (atomTriggerRef.current && windowDimensions) {
+    if (atomTriggerRef.current && dimensions) {
       const triggerElement = atomTriggerRef.current;
       const elementDOMRect = triggerElement.getBoundingClientRect();
       const [offsetTop, offsetRight, offsetBottom, offsetLeft] = offset;
 
       if (
         elementDOMRect.top > offsetTop &&
-        elementDOMRect.bottom < windowDimensions.height - offsetBottom &&
+        elementDOMRect.bottom < dimensions.height - offsetBottom &&
         elementDOMRect.left > offsetLeft &&
-        elementDOMRect.right < windowDimensions.width - offsetRight
+        elementDOMRect.right < dimensions.width - offsetRight
       ) {
         setTriggerPosition('inViewport');
-      } else if (elementDOMRect.top > windowDimensions.height - offsetBottom) {
+      } else if (elementDOMRect.top > dimensions.height - offsetBottom) {
         setTriggerPosition('bottom');
       } else {
         setTriggerPosition('top');
       }
     }
-  }, [atomTriggerRef, scrollEvent, name, windowDimensions, offset]);
+  }, [atomTriggerRef, scrollEvent, name, dimensions, offset]);
 
   React.useLayoutEffect(() => {
     if (
