@@ -51,5 +51,4 @@ type SimpleScrollEvent = {
 
 ## Example Usage
 
-- Simple example: https://codesandbox.io/s/simple-trigger-example-7q4f3b
-- Simple example with `react-use`: https://codesandbox.io/s/react-atom-trigger-simple-example-with-help-of-react-use-mywbzu
+- https://codesandbox.io/dashboard/all/react-atom-trigger
