@@ -1,3 +1,5 @@
+![react-atom-trigger](/assets/atom-trigger.svg)
+
 # react-atom-trigger
 
 Simple react-waypoint alternative
@@ -10,7 +12,7 @@ Exposes `<AtomTrigger {...props} />` component, where `props` are:
 ```
 interface IAtomTriggerProps {
   scrollEvent: SimpleScrollEvent;
-  windowDimensions: WindowDimensions | null;
+  dimensions: Dimensions | null;
   behavior?: 'default' | 'enter' | 'leave';
   callback: () => void | Promise<void>;
   getDebugInfo?: (data: DebugInfo) => void;
@@ -32,7 +34,7 @@ type Dimensions = {
   width: number;
   height: number;
 };
-```
+``
 
 ### Scroll Event
  
@@ -47,4 +49,9 @@ type SimpleScrollEvent = {
 
 ## Example Usage
 
+If you do not already have logic for getting/updating needed container dimensions or handling scroll, you can use simple `useWindowDimensions` and `useContainerScroll` hooks, which are also available to import.
+
 You can play with the examples: https://codesandbox.io/dashboard/all/react-atom-trigger
+
+
+

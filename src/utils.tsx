@@ -1,6 +1,10 @@
 import React from 'react';
 import { Dimensions, SimpleScrollEvent } from './AtomTrigger';
 
+export type Options = {
+  passiveEventListener?: boolean;
+  eventListenerTimeoutMs?: number;
+};
 
 export function log<T>(log: T, color?: string) {
   if (process.env.NODE_ENV === 'development') {
@@ -28,12 +32,12 @@ function getWindowDimensions(): Dimensions {
   };
 }
 
-export function useWindowDimensions(options: { timeout: number } | undefined) {
+export function useWindowDimensions(options?: Options | undefined) {
   const [dimensions, setDimensions] = React.useState<Dimensions | null>(null);
   const currentTimeout = React.useRef<NodeJS.Timeout | null>(null);
   const eventListenerAdded = React.useRef(false);
 
-  const resizeTimeout = options && options.timeout  ? options.timeout : 15;
+  const resizeTimeout = options?.eventListenerTimeoutMs || 15;
 
   React.useEffect(() => {
     const dimensions = getWindowDimensions();
@@ -47,7 +51,9 @@ export function useWindowDimensions(options: { timeout: number } | undefined) {
       );
     }
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize, {
+      passive: options?.passiveEventListener,
+    });
     eventListenerAdded.current = true;
 
     return () => {
@@ -62,10 +68,10 @@ export function useWindowDimensions(options: { timeout: number } | undefined) {
 
 export function useContainerScroll({
   containerRef,
-  timeout,
+  options,
 }: {
   containerRef?: React.RefObject<HTMLDivElement>;
-  timeout?: number;
+  options?: Options;
 }) {
   const [scrollInfo, setScrollInfo] = React.useState(getScrollInfo());
   const currentTimeout = React.useRef<NodeJS.Timeout | null>(null);
@@ -79,13 +85,15 @@ export function useContainerScroll({
           scrollX: e.target.scrollLeft,
           scrollY: e.target.scrollTop,
         });
-      }, timeout || 15);
+      }, options?.eventListenerTimeoutMs || 15);
     };
 
     const containerElement = containerRef?.current;
     if (containerElement) {
       if (containerElement && eventListenerAdded.current === false) {
-        containerElement.addEventListener('scroll', handleScroll);
+        containerElement.addEventListener('scroll', handleScroll, {
+          passive: options?.passiveEventListener,
+        });
       }
       eventListenerAdded.current = true;
     }
@@ -99,7 +107,7 @@ export function useContainerScroll({
   return scrollInfo;
 }
 
-export function useWindowScroll() {
+export function useWindowScroll(options?: Options) {
   const [scrollInfo, setScrollInfo] = React.useState(getScrollInfo());
   const currentTimeout = React.useRef<NodeJS.Timeout | null>(null);
   const eventListenerAdded = React.useRef(false);
@@ -113,10 +121,12 @@ export function useWindowScroll() {
           scrollX,
           scrollY,
         });
-      }, 15);
+      }, options?.eventListenerTimeoutMs || 20);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, {
+      passive: options?.passiveEventListener,
+    });
     eventListenerAdded.current = true;
 
     return () => {
