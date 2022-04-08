@@ -47,4 +47,4 @@ type SimpleScrollEvent = {
 
 ## Example Usage
 
-TBD
+You can play with the examples: https://codesandbox.io/dashboard/all/react-atom-trigger
