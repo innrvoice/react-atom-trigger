@@ -28,10 +28,12 @@ function getWindowDimensions(): Dimensions {
   };
 }
 
-export function useWindowDimensions() {
+export function useWindowDimensions(options: { timeout: number } | undefined) {
   const [dimensions, setDimensions] = React.useState<Dimensions | null>(null);
   const currentTimeout = React.useRef<NodeJS.Timeout | null>(null);
   const eventListenerAdded = React.useRef(false);
+
+  const resizeTimeout = options && options.timeout  ? options.timeout : 15;
 
   React.useEffect(() => {
     const dimensions = getWindowDimensions();
@@ -41,7 +43,7 @@ export function useWindowDimensions() {
       currentTimeout.current && clearTimeout(currentTimeout.current);
       currentTimeout.current = setTimeout(
         () => setDimensions(getWindowDimensions()),
-        400,
+        resizeTimeout,
       );
     }
 
@@ -60,8 +62,10 @@ export function useWindowDimensions() {
 
 export function useContainerScroll({
   containerRef,
+  timeout,
 }: {
   containerRef?: React.RefObject<HTMLDivElement>;
+  timeout?: number;
 }) {
   const [scrollInfo, setScrollInfo] = React.useState(getScrollInfo());
   const currentTimeout = React.useRef<NodeJS.Timeout | null>(null);
@@ -75,7 +79,7 @@ export function useContainerScroll({
           scrollX: e.target.scrollLeft,
           scrollY: e.target.scrollTop,
         });
-      }, 15);
+      }, timeout || 15);
     };
 
     const containerElement = containerRef?.current;
