@@ -34,9 +34,7 @@ type Dimensions = {
   width: number;
   height: number;
 };
-```
-
-If you do not already have logic for getting/updating needed container dimensions, you can use simple `useWindowDimensions` and `useContainerScroll` hooks (also exported from this package) or use `useWindowSize` or `useScrolling` hooks from `react-use` package (https://www.npmjs.com/package/react-use).
+``
 
 ### Scroll Event
  
@@ -51,4 +49,9 @@ type SimpleScrollEvent = {
 
 ## Example Usage
 
-- https://codesandbox.io/dashboard/all/react-atom-trigger
+If you do not already have logic for getting/updating needed container dimensions or handling scroll, you can use simple `useWindowDimensions` and `useContainerScroll` hooks, which are also available to import.
+
+You can play with the examples: https://codesandbox.io/dashboard/all/react-atom-trigger
+
+
+
