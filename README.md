@@ -1,5 +1,3 @@
-![react-atom-trigger](/assets/atom-trigger.svg)
-
 # react-atom-trigger
 
 Simple react-waypoint alternative.
