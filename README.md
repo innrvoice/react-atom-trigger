@@ -2,7 +2,9 @@
 
 # react-atom-trigger
 
-Simple react-waypoint alternative
+Simple react-waypoint alternative.
+
+[More detailed overview](https://innrvoice.medium.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11) is available as Medium story.
 
 ## Basic features
 
@@ -47,8 +49,7 @@ type ScrollEvent = {
 };
 ```
 
-## Utility methods
-
+## Utility hooks
 For someone who wants everything out-of-the-box, `useWindowDimensions`, `useWindowScroll` and `useContainerScroll` hooks are also available for import.
 
 ## Examples
