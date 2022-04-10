@@ -11,7 +11,7 @@ Exposes `<AtomTrigger {...props} />` component, where `props` are:
 
 ```
 interface IAtomTriggerProps {
-  scrollEvent: SimpleScrollEvent;
+  scrollEvent: ScrollEvent;
   dimensions: Dimensions | null;
   behavior?: 'default' | 'enter' | 'leave';
   callback: () => void | Promise<void>;
@@ -41,19 +41,20 @@ type Dimensions = {
 To trigger "events" `AtomTrigger` needs some kind of simple scroll event provided.
 
 ```
-type SimpleScrollEvent = { 
+type ScrollEvent = { 
     scrollX: number; 
-    scrollY: number 
+    scrollY: number;
 };
 ```
 
-## Usage
+## Utility methods
 
-If you do not already have logic for getting/updating needed container dimensions or handling scroll, you can use simple `useWindowDimensions` and `useContainerScroll` hooks, which are also available to import.
+For someone who wants everything out-of-the-box, `useWindowDimensions`, `useWindowScroll` and `useContainerScroll` hooks are also available for import.
 
 ## Examples
+It is sometimes better to tweak and see for yourself. You can play with [CodeSandbox examples](https://codesandbox.io/dashboard/all/react-atom-trigger).
 
-You can play with the examples: https://codesandbox.io/dashboard/all/react-atom-trigger
+
 
 
 

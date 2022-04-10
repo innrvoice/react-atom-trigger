@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, SimpleScrollEvent } from './AtomTrigger';
+import { Dimensions, ScrollEvent } from './AtomTrigger';
 
 export type Options = {
   passiveEventListener?: boolean;
@@ -16,7 +16,7 @@ export function log<T>(log: T, color?: string) {
   }
 }
 
-function getScrollInfo(): SimpleScrollEvent {
+function getScrollInfo(): ScrollEvent {
   const { scrollX, scrollY } = window;
   return {
     scrollX,
