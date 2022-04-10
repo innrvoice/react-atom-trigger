@@ -4,7 +4,7 @@
   "main": "lib/index.js",
   "module": "lib/index.es.js",
   "typings": "lib/index.d.ts",
-  "version": "0.0.3-ci.8",
+  "version": "0.0.3-ci.9",
   "license": "MIT",
   "author": "innrVoice <innrvoice@icloud.com>",
   "repository": {
@@ -14,7 +14,7 @@
   "bugs": {
     "url": "https://github.com/innrvoice/react-atom-trigger/issues"
   },
-  "homepage": "https://github.com/innrvoice/react-atom-trigger#readme",
+  "homepage": "https://innrvoice.medium.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11",
   "scripts": {
     "build": "rimraf lib && rollup -c rollup.config.js"
   },

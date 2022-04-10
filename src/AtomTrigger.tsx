@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type SimpleScrollEvent = { scrollX: number; scrollY: number };
+export type ScrollEvent = { scrollX: number; scrollY: number };
 
 export type Dimensions = {
   width: number;
@@ -13,7 +13,7 @@ export type DebugInfo = {
 };
 
 export interface IAtomTriggerProps {
-  scrollEvent: SimpleScrollEvent;
+  scrollEvent: ScrollEvent;
   behavior?: 'default' | 'enter' | 'leave';
   callback: () => void | Promise<void>;
   getDebugInfo?: (data: DebugInfo) => void;
