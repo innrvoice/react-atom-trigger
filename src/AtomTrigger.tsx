@@ -18,7 +18,6 @@ export interface IAtomTriggerProps {
   callback: () => void | Promise<void>;
   getDebugInfo?: (data: DebugInfo) => void;
   triggerOnce?: boolean;
-  name?: string;
   className?: string;
   dimensions: Dimensions | null;
   offset?: [number, number, number, number];
@@ -29,7 +28,6 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
   callback,
   getDebugInfo,
   triggerOnce = false,
-  name,
   className,
   behavior = 'default',
   dimensions,
@@ -65,7 +63,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
         setTriggerPosition('top');
       }
     }
-  }, [atomTriggerRef, scrollEvent, name, dimensions, offset]);
+  }, [atomTriggerRef, scrollEvent, dimensions, offset]);
 
   React.useLayoutEffect(() => {
     if (
@@ -135,7 +133,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
         setTimesTriggered(updatedTimes);
       }
     }
-  }, [triggerPosition, name, callback, triggerOnce, behavior, getDebugInfo]);
+  }, [triggerPosition, callback, triggerOnce, behavior, getDebugInfo]);
 
   return (
     <div
