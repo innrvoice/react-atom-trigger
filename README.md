@@ -19,7 +19,6 @@ interface IAtomTriggerProps {
   callback: () => void | Promise<void>;
   getDebugInfo?: (data: DebugInfo) => void;
   triggerOnce?: boolean;
-  name?: string;
   className?: string;
   offset?: [number, number, number, number];
 }
