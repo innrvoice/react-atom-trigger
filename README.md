@@ -4,7 +4,7 @@ Simple react-waypoint alternative.
 
 [More detailed overview](https://innrvoice.medium.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11) is available as Medium story.
 
-<a href="https://www.npmjs.com/package/react-atom-trigger" target="_blank" style="color: violet">NPM: v1.0.1-ci.3</a>
+<a href="https://www.npmjs.com/package/react-atom-trigger" target="_blank" style="color: violet !important">NPM: v1.0.1-ci.3</a>
 ## Basic features
 
 
