@@ -4,7 +4,7 @@
   "main": "lib/index.js",
   "module": "lib/index.es.js",
   "typings": "lib/index.d.ts",
-  "version": "1.0.1-ci.5",
+  "version": "1.0.1",
   "license": "MIT",
   "author": "innrVoice <innrvoice@icloud.com>",
   "repository": {
