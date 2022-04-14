@@ -2,7 +2,6 @@
 
 Simple "[react-waypoint](https://www.npmjs.com/package/react-waypoint)" alternative.
 
-<a href="https://www.npmjs.com/package/react-atom-trigger" target="_blank" style="color: violet !important">NPM: v1.0.1-ci.5</a>
 ## Basic features
 
 
