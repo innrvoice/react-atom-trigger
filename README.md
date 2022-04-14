@@ -1,10 +1,8 @@
 # react-atom-trigger
 
-Simple react-waypoint alternative.
+Simple "[React Waypoint](https://civiccc.github.io/react-waypoint/)" alternative.
 
-[More detailed overview](https://innrvoice.medium.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11) is available as Medium story.
-
-<a href="https://www.npmjs.com/package/react-atom-trigger" target="_blank" style="color: violet !important">NPM: v1.0.1-ci.3</a>
+<a href="https://www.npmjs.com/package/react-atom-trigger" target="_blank" style="color: violet !important">NPM: v1.0.1-ci.4</a>
 ## Basic features
 
 
@@ -23,11 +21,20 @@ interface IAtomTriggerProps {
 }
 ```
 
-In order to work `AtomTrigger` needs dimensions and some kind of scroll event provided.
+In order to "work" `AtomTrigger` needs callback, dimensions and simple scroll event data provided.
+
+### Callback
+
+The function to be executed when AtomTrigger enters or leaves some container.
+
+```
+callback: () => void | Promise<void>
+```
+
 
 ### Dimensions
 
-Dimensions of the main content "container" (window in many cases). 
+Dimensions of the main "container" (window in many cases). 
 
 ```
 type Dimensions = {
@@ -35,6 +42,8 @@ type Dimensions = {
   height: number;
 };
 ```
+
+So if you have some logic of calculating container size and container resize handling, just provide needed data to AtomTrigger.
 
 ### Scroll Event
  
@@ -47,11 +56,16 @@ type ScrollEvent = {
 };
 ```
 
+So, if you already have some scroll event listener, just provide it to AtomTrigger.
+
 ## Utility hooks
 For someone who wants everything out-of-the-box, `useWindowDimensions`, `useWindowScroll` and `useContainerScroll` hooks are also available for import.
 
 ## Examples
-It is sometimes better to tweak and see for yourself. You can play with [CodeSandbox examples](https://codesandbox.io/dashboard/all/react-atom-trigger).
+It is sometimes better to tweak and see for yourself: [CodeSandbox examples](https://codesandbox.io/dashboard/all/react-atom-trigger).
+
+
+ [**More detailed react-atom-trigger overview**](https://visiofutura.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11) is available as Medium story.
 
 
 
