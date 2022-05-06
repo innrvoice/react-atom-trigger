@@ -2,6 +2,8 @@
 
 Simple "[react-waypoint](https://www.npmjs.com/package/react-waypoint)" alternative.
 
+[![Rate this package](https://badges.openbase.com/js/rating/react-atom-trigger.svg?token=obqD5WbPFYKtLHx+ZKREtJhJ+WL+BRIBPByrfEOhT4Q=)](https://openbase.com/js/react-atom-trigger?utm_source=embedded&amp;utm_medium=badge&amp;utm_campaign=rate-badge)
+
 ## Basic features
 
 
