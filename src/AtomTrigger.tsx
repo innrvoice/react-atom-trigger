@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type SimpleScrollEvent = { scrollX: number; scrollY: number };
+export type ScrollEvent = { scrollX: number; scrollY: number };
 
 export type Dimensions = {
   width: number;
@@ -13,12 +13,11 @@ export type DebugInfo = {
 };
 
 export interface IAtomTriggerProps {
-  scrollEvent: SimpleScrollEvent;
+  scrollEvent: ScrollEvent;
   behavior?: 'default' | 'enter' | 'leave';
   callback: () => void | Promise<void>;
   getDebugInfo?: (data: DebugInfo) => void;
   triggerOnce?: boolean;
-  name?: string;
   className?: string;
   dimensions: Dimensions | null;
   offset?: [number, number, number, number];
@@ -29,7 +28,6 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
   callback,
   getDebugInfo,
   triggerOnce = false,
-  name,
   className,
   behavior = 'default',
   dimensions,
@@ -65,7 +63,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
         setTriggerPosition('top');
       }
     }
-  }, [atomTriggerRef, scrollEvent, name, dimensions, offset]);
+  }, [atomTriggerRef, scrollEvent, dimensions, offset]);
 
   React.useLayoutEffect(() => {
     if (
@@ -135,7 +133,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
         setTimesTriggered(updatedTimes);
       }
     }
-  }, [triggerPosition, name, callback, triggerOnce, behavior, getDebugInfo]);
+  }, [triggerPosition, callback, triggerOnce, behavior, getDebugInfo]);
 
   return (
     <div

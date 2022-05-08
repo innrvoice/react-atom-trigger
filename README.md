@@ -1,8 +1,8 @@
-![react-atom-trigger](/assets/atom-trigger.svg)
-
 # react-atom-trigger
 
-Simple react-waypoint alternative
+Simple "[react-waypoint](https://www.npmjs.com/package/react-waypoint)" alternative.
+
+[![Rate this package](https://badges.openbase.com/js/rating/react-atom-trigger.svg?token=obqD5WbPFYKtLHx+ZKREtJhJ+WL+BRIBPByrfEOhT4Q=)](https://openbase.com/js/react-atom-trigger?utm_source=embedded&amp;utm_medium=badge&amp;utm_campaign=rate-badge)
 
 ## Basic features
 
@@ -11,23 +11,31 @@ Exposes `<AtomTrigger {...props} />` component, where `props` are:
 
 ```
 interface IAtomTriggerProps {
-  scrollEvent: SimpleScrollEvent;
+  scrollEvent: ScrollEvent;
   dimensions: Dimensions | null;
   behavior?: 'default' | 'enter' | 'leave';
   callback: () => void | Promise<void>;
   getDebugInfo?: (data: DebugInfo) => void;
   triggerOnce?: boolean;
-  name?: string;
   className?: string;
   offset?: [number, number, number, number];
 }
 ```
 
-In order to work `AtomTrigger` needs dimensions and some kind of scroll event provided.
+In order to "work" `AtomTrigger` needs callback, dimensions and simple scroll event data provided.
+
+### Callback
+
+The function to be executed when AtomTrigger enters or leaves some container.
+
+```
+callback: () => void | Promise<void>
+```
+
 
 ### Dimensions
 
-Dimensions of the main content "container" (window in many cases). 
+Dimensions of the main "container" (window in many cases). 
 
 ```
 type Dimensions = {
@@ -36,24 +44,31 @@ type Dimensions = {
 };
 ```
 
+So if you have some logic of calculating container size and container resize handling, just provide needed data to AtomTrigger.
+
 ### Scroll Event
  
 To trigger "events" `AtomTrigger` needs some kind of simple scroll event provided.
 
 ```
-type SimpleScrollEvent = { 
+type ScrollEvent = { 
     scrollX: number; 
-    scrollY: number 
+    scrollY: number;
 };
 ```
 
-## Usage
+So, if you already have some scroll event listener, just provide it to AtomTrigger.
 
-If you do not already have logic for getting/updating needed container dimensions or handling scroll, you can use simple `useWindowDimensions` and `useContainerScroll` hooks, which are also available to import.
+## Utility hooks
+For someone who wants everything out-of-the-box, `useWindowDimensions`, `useWindowScroll` and `useContainerScroll` hooks are also available for import.
 
 ## Examples
+It is sometimes better to tweak and see for yourself: [CodeSandbox examples](https://codesandbox.io/dashboard/all/react-atom-trigger).
 
-You can play with the examples: https://codesandbox.io/dashboard/all/react-atom-trigger
+
+ [**More detailed react-atom-trigger overview**](https://visiofutura.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11) is available as Medium story.
+
+
 
 
 
