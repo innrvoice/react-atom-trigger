@@ -2,7 +2,7 @@ import typescript from 'rollup-plugin-typescript2';
 import resolve from '@rollup/plugin-node-resolve';
 import commonJS from '@rollup/plugin-commonjs';
 import { terser } from 'rollup-plugin-terser';
-import pkg from './package.json';
+import pkg from './package.json' assert { type: 'json' };
 
 export default {
   input: './src/index.ts',
@@ -11,7 +11,6 @@ export default {
     {
       format: 'es',
       file: pkg.module,
-      sourcemap: true,
       globals: {
         react: 'React',
       },
@@ -20,7 +19,6 @@ export default {
       format: 'umd',
       file: pkg.main,
       name: pkg.name,
-      sourcemap: true,
       globals: {
         react: 'React',
       },
