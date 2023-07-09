@@ -27,7 +27,7 @@ In order to "work" `AtomTrigger` needs callback, dimensions and simple scroll ev
 The function to be executed when AtomTrigger enters or leaves some container.
 
 ```
-callback: () => void | Promise<void>
+callback: () => unknown;
 ```
 
 
