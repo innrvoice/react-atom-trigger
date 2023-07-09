@@ -119,7 +119,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
               (timesTriggered.leftViewport < 1 ||
                 timesTriggered.enteredViewport < 1))))
       ) {
-        callback && Promise.resolve(callback()); // TODO
+        callback && Promise.resolve(callback());
 
         const updatedTimes = {
           ...timesTriggered,
