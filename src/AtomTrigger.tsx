@@ -15,7 +15,7 @@ export type DebugInfo = {
 export interface IAtomTriggerProps {
   scrollEvent: ScrollEvent;
   behavior?: 'default' | 'enter' | 'leave';
-  callback: () => void | Promise<void>;
+  callback: () => unknown;
   getDebugInfo?: (data: DebugInfo) => void;
   triggerOnce?: boolean;
   className?: string;
@@ -87,7 +87,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
               (timesTriggered.enteredViewport < 1 ||
                 timesTriggered.leftViewport < 1))))
       ) {
-        callback && Promise.resolve(callback());
+        callback && callback();
         const updatedTimes = {
           ...timesTriggered,
           enteredViewport: timesTriggered.enteredViewport + 1,
@@ -119,7 +119,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
               (timesTriggered.leftViewport < 1 ||
                 timesTriggered.enteredViewport < 1))))
       ) {
-        callback && Promise.resolve(callback());
+        callback && callback();
 
         const updatedTimes = {
           ...timesTriggered,

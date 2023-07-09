@@ -12,7 +12,7 @@ interface IAtomTriggerProps {
   scrollEvent: ScrollEvent;
   dimensions: Dimensions | null;
   behavior?: 'default' | 'enter' | 'leave';
-  callback: () => void | Promise<void>;
+  callback: () => unknown;
   getDebugInfo?: (data: DebugInfo) => void;
   triggerOnce?: boolean;
   className?: string;
