@@ -63,7 +63,7 @@ For someone who wants everything out-of-the-box, `useWindowDimensions`, `useWind
 ## Examples
 It is sometimes better to tweak and see for yourself: [CodeSandbox examples](https://codesandbox.io/examples/package/react-atom-trigger).
 
- [**More detailed react-atom-trigger overview**](https://visiofutura.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11) is available as Medium story.
+ [**More detailed react-atom-trigger overview with examples**](https://visiofutura.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11)
 
 
 
