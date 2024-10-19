@@ -61,6 +61,7 @@ export function useWindowDimensions(options?: Options | undefined) {
         window.removeEventListener('resize', handleResize);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return dimensions;
@@ -78,12 +79,13 @@ export function useContainerScroll({
   const eventListenerAdded = React.useRef(false);
 
   React.useEffect(() => {
-    const handleScroll = (e: any) => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLDivElement;
       currentTimeout.current && clearTimeout(currentTimeout.current);
       currentTimeout.current = setTimeout(() => {
         setScrollInfo({
-          scrollX: e.target.scrollLeft,
-          scrollY: e.target.scrollTop,
+          scrollX: target.scrollLeft,
+          scrollY: target.scrollTop,
         });
       }, options?.eventListenerTimeoutMs || 15);
     };
@@ -103,6 +105,7 @@ export function useContainerScroll({
         containerElement.removeEventListener('scroll', handleScroll);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerRef]);
   return scrollInfo;
 }
@@ -134,6 +137,7 @@ export function useWindowScroll(options?: Options) {
         window.removeEventListener('scroll', handleScroll);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return scrollInfo;

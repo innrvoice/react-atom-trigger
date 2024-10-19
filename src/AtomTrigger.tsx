@@ -133,6 +133,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
         setTimesTriggered(updatedTimes);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerPosition, callback, triggerOnce, behavior, getDebugInfo]);
 
   return (
