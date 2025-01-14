@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, ScrollEvent } from './AtomTrigger';
+import { Dimensions, ScrollEvent } from './AtomTrigger.types';
 
 export type Options = {
   passiveEventListener?: boolean;
@@ -33,7 +33,9 @@ function getWindowDimensions(): Dimensions {
 }
 
 export function useWindowDimensions(options?: Options | undefined) {
-  const [dimensions, setDimensions] = React.useState<Dimensions | null>(null);
+  const [dimensions, setDimensions] = React.useState<Dimensions>(
+    getWindowDimensions(),
+  );
   const currentTimeout = React.useRef<NodeJS.Timeout | null>(null);
   const eventListenerAdded = React.useRef(false);
 
