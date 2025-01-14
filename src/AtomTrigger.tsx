@@ -1,27 +1,5 @@
 import React from 'react';
-
-export type ScrollEvent = { scrollX: number; scrollY: number };
-
-export type Dimensions = {
-  width: number;
-  height: number;
-};
-
-export type DebugInfo = {
-  timesTriggered: { leftViewport: number; enteredViewport: number };
-  trigger: 'entered' | 'left';
-};
-
-export interface IAtomTriggerProps {
-  scrollEvent: ScrollEvent;
-  behavior?: 'default' | 'enter' | 'leave';
-  callback: () => unknown;
-  getDebugInfo?: (data: DebugInfo) => void;
-  triggerOnce?: boolean;
-  className?: string;
-  dimensions: Dimensions | null;
-  offset?: [number, number, number, number];
-}
+import { IAtomTriggerProps } from './AtomTrigger.types';
 
 const AtomTrigger: React.FC<IAtomTriggerProps> = ({
   scrollEvent,
@@ -37,7 +15,9 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
   const [triggerPosition, setTriggerPosition] = React.useState<
     'inViewport' | 'top' | 'bottom'
   >();
-  const previousPositionState = React.useRef<'inViewport' | 'top' | 'bottom'>();
+  const previousPositionState = React.useRef<
+    'inViewport' | 'top' | 'bottom' | null
+  >(null);
 
   const [timesTriggered, setTimesTriggered] = React.useState({
     leftViewport: 0,
@@ -45,7 +25,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
   });
 
   React.useLayoutEffect(() => {
-    if (atomTriggerRef.current && dimensions) {
+    if (atomTriggerRef.current) {
       const triggerElement = atomTriggerRef.current;
       const elementDOMRect = triggerElement.getBoundingClientRect();
       const [offsetTop, offsetRight, offsetBottom, offsetLeft] = offset;
