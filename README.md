@@ -1,6 +1,6 @@
 # react-atom-trigger
 
-Helps solve the problem of executing code when some element "scrolls into (or out of) view". A pretty simple "[react-waypoint](https://www.npmjs.com/package/react-waypoint)" alternative written in Typescript.
+AtomTrigger helps solve the problem of executing code when some element "scrolls into (or out of) view". A pretty simple "[react-waypoint](https://www.npmjs.com/package/react-waypoint)" alternative written in Typescript.
 
 ## Basic features
 
@@ -10,7 +10,7 @@ Exposes `<AtomTrigger {...props} />` component, where `props` are:
 ```
 interface IAtomTriggerProps {
   scrollEvent: ScrollEvent;
-  dimensions: Dimensions | null;
+  dimensions: Dimensions;
   behavior?: 'default' | 'enter' | 'leave';
   callback: () => unknown;
   getDebugInfo?: (data: DebugInfo) => void;
