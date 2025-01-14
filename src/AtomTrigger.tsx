@@ -13,11 +13,11 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
 }) => {
   const atomTriggerRef = React.useRef<HTMLDivElement>(null);
   const [triggerPosition, setTriggerPosition] = React.useState<
-    'inViewport' | 'top' | 'bottom'
-  >();
+    'inViewport' | 'top' | 'bottom' | undefined
+  >(undefined);
   const previousPositionState = React.useRef<
-    'inViewport' | 'top' | 'bottom' | null
-  >(null);
+    'inViewport' | 'top' | 'bottom' | undefined
+  >(undefined);
 
   const [timesTriggered, setTimesTriggered] = React.useState({
     leftViewport: 0,
