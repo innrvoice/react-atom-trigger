@@ -10,7 +10,7 @@ Exposes `<AtomTrigger {...props} />` component, where `props` are:
 ```
 interface IAtomTriggerProps {
   scrollEvent: ScrollEvent;
-  dimensions: Dimensions | null;
+  dimensions: Dimensions;
   behavior?: 'default' | 'enter' | 'leave';
   callback: () => unknown;
   getDebugInfo?: (data: DebugInfo) => void;
