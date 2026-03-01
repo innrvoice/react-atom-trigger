@@ -60,11 +60,24 @@ So, if you already have some scroll event listener, just provide it to AtomTrigg
 ## Utility hooks
 For someone who wants everything out-of-the-box, `useWindowDimensions`, `useWindowScroll` and `useContainerScroll` hooks are also available for import.
 
+## Build
+This package is built with `tsdown`.
+
+Build output:
+
+```text
+lib/index.js
+lib/index.es.js
+lib/index.d.ts
+```
+
+## UMD global
+When the UMD bundle is loaded directly in the browser, the library is exposed as `window.reactAtomTrigger`.
+
 ## Examples
 It is sometimes better to tweak and see for yourself: [CodeSandbox examples](https://codesandbox.io/examples/package/react-atom-trigger).
 
  [**More detailed react-atom-trigger overview with examples**](https://visiofutura.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11)
-
 
 
 

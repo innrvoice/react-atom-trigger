@@ -46,7 +46,9 @@ export function useWindowDimensions(options?: Options | undefined) {
     setDimensions(dimensions);
 
     function handleResize() {
-      currentTimeout.current && clearTimeout(currentTimeout.current);
+      if (currentTimeout.current) {
+        clearTimeout(currentTimeout.current);
+      }
       currentTimeout.current = setTimeout(
         () => setDimensions(getWindowDimensions()),
         resizeTimeout,
@@ -63,7 +65,6 @@ export function useWindowDimensions(options?: Options | undefined) {
         window.removeEventListener('resize', handleResize);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return dimensions;
@@ -83,7 +84,9 @@ export function useContainerScroll({
   React.useEffect(() => {
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLDivElement;
-      currentTimeout.current && clearTimeout(currentTimeout.current);
+      if (currentTimeout.current) {
+        clearTimeout(currentTimeout.current);
+      }
       currentTimeout.current = setTimeout(() => {
         setScrollInfo({
           scrollX: target.scrollLeft,
@@ -107,7 +110,6 @@ export function useContainerScroll({
         containerElement.removeEventListener('scroll', handleScroll);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerRef]);
   return scrollInfo;
 }
@@ -119,7 +121,9 @@ export function useWindowScroll(options?: Options) {
 
   React.useEffect(() => {
     const handleScroll = () => {
-      currentTimeout.current && clearTimeout(currentTimeout.current);
+      if (currentTimeout.current) {
+        clearTimeout(currentTimeout.current);
+      }
       currentTimeout.current = setTimeout(() => {
         const { scrollX, scrollY } = getScrollInfo();
         setScrollInfo({
@@ -139,7 +143,6 @@ export function useWindowScroll(options?: Options) {
         window.removeEventListener('scroll', handleScroll);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return scrollInfo;

@@ -67,16 +67,19 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
               (timesTriggered.enteredViewport < 1 ||
                 timesTriggered.leftViewport < 1))))
       ) {
-        callback && callback();
+        if (callback) {
+          callback();
+        }
         const updatedTimes = {
           ...timesTriggered,
           enteredViewport: timesTriggered.enteredViewport + 1,
         };
-        getDebugInfo &&
+        if (getDebugInfo) {
           getDebugInfo({
             timesTriggered: updatedTimes,
             trigger: 'entered',
           });
+        }
         setTimesTriggered(updatedTimes);
       }
 
@@ -99,21 +102,23 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
               (timesTriggered.leftViewport < 1 ||
                 timesTriggered.enteredViewport < 1))))
       ) {
-        callback && callback();
+        if (callback) {
+          callback();
+        }
 
         const updatedTimes = {
           ...timesTriggered,
           leftViewport: timesTriggered.leftViewport + 1,
         };
-        getDebugInfo &&
+        if (getDebugInfo) {
           getDebugInfo({
             timesTriggered: updatedTimes,
             trigger: 'left',
           });
+        }
         setTimesTriggered(updatedTimes);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerPosition, callback, triggerOnce, behavior, getDebugInfo]);
 
   return (
