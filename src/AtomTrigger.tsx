@@ -1,6 +1,9 @@
 import React from 'react';
 import { IAtomTriggerProps } from './AtomTrigger.types';
 
+const useIsomorphicLayoutEffect =
+  typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+
 const AtomTrigger: React.FC<IAtomTriggerProps> = ({
   scrollEvent,
   callback,
@@ -24,7 +27,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
     enteredViewport: 0,
   });
 
-  React.useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (atomTriggerRef.current) {
       const triggerElement = atomTriggerRef.current;
       const elementDOMRect = triggerElement.getBoundingClientRect();
@@ -45,7 +48,7 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
     }
   }, [atomTriggerRef, scrollEvent, dimensions, offset]);
 
-  React.useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (
       previousPositionState.current === undefined &&
       triggerPosition !== undefined
@@ -60,7 +63,8 @@ const AtomTrigger: React.FC<IAtomTriggerProps> = ({
     ) {
       if (
         (behavior === 'enter' &&
-          (!triggerOnce || (triggerOnce && timesTriggered.enteredViewport))) ||
+          (!triggerOnce ||
+            (triggerOnce && timesTriggered.enteredViewport === 0))) ||
         (behavior === 'default' &&
           (!triggerOnce ||
             (triggerOnce &&

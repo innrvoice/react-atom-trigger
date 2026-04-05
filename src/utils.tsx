@@ -6,8 +6,23 @@ export type Options = {
   eventListenerTimeoutMs?: number;
 };
 
+const DEFAULT_SCROLL_INFO: ScrollEvent = {
+  scrollX: 0,
+  scrollY: 0,
+};
+
+const DEFAULT_DIMENSIONS: Dimensions = {
+  width: 0,
+  height: 0,
+};
+
+const hasWindow = typeof window !== 'undefined';
+
 export function log<T>(log: T, color?: string) {
-  if (process.env.NODE_ENV === 'development') {
+  if (
+    typeof process !== 'undefined' &&
+    process.env.NODE_ENV === 'development'
+  ) {
     color = !color
       ? 'background:  #007700; color: #fff'
       : `background: ${color}; color: #fff`;
@@ -17,6 +32,10 @@ export function log<T>(log: T, color?: string) {
 }
 
 function getScrollInfo(): ScrollEvent {
+  if (!hasWindow) {
+    return DEFAULT_SCROLL_INFO;
+  }
+
   const { scrollX, scrollY } = window;
   return {
     scrollX,
@@ -25,6 +44,10 @@ function getScrollInfo(): ScrollEvent {
 }
 
 function getWindowDimensions(): Dimensions {
+  if (!hasWindow) {
+    return DEFAULT_DIMENSIONS;
+  }
+
   const { innerWidth: width, innerHeight: height } = window;
   return {
     width,
@@ -32,16 +55,34 @@ function getWindowDimensions(): Dimensions {
   };
 }
 
+function getElementScrollInfo(
+  element?: Pick<HTMLElement, 'scrollLeft' | 'scrollTop'> | null,
+): ScrollEvent {
+  if (!element) {
+    return DEFAULT_SCROLL_INFO;
+  }
+
+  return {
+    scrollX: element.scrollLeft,
+    scrollY: element.scrollTop,
+  };
+}
+
 export function useWindowDimensions(options?: Options | undefined) {
-  const [dimensions, setDimensions] = React.useState<Dimensions>(
+  const [dimensions, setDimensions] = React.useState<Dimensions>(() =>
     getWindowDimensions(),
   );
-  const currentTimeout = React.useRef<NodeJS.Timeout | null>(null);
-  const eventListenerAdded = React.useRef(false);
+  const currentTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const resizeTimeout = options?.eventListenerTimeoutMs || 15;
 
   React.useEffect(() => {
+    if (!hasWindow) {
+      return;
+    }
+
     const dimensions = getWindowDimensions();
     setDimensions(dimensions);
 
@@ -58,14 +99,15 @@ export function useWindowDimensions(options?: Options | undefined) {
     window.addEventListener('resize', handleResize, {
       passive: options?.passiveEventListener,
     });
-    eventListenerAdded.current = true;
 
     return () => {
-      if (eventListenerAdded) {
-        window.removeEventListener('resize', handleResize);
+      if (currentTimeout.current) {
+        clearTimeout(currentTimeout.current);
       }
+
+      window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [options?.eventListenerTimeoutMs, options?.passiveEventListener]);
 
   return dimensions;
 }
@@ -74,16 +116,25 @@ export function useContainerScroll({
   containerRef,
   options,
 }: {
-  containerRef?: React.RefObject<HTMLDivElement>;
+  containerRef?: React.RefObject<HTMLElement | null>;
   options?: Options;
 }) {
-  const [scrollInfo, setScrollInfo] = React.useState(getScrollInfo());
-  const currentTimeout = React.useRef<NodeJS.Timeout | null>(null);
-  const eventListenerAdded = React.useRef(false);
+  const [scrollInfo, setScrollInfo] = React.useState<ScrollEvent>(() =>
+    getElementScrollInfo(containerRef?.current),
+  );
+  const currentTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const containerElement = containerRef?.current;
 
   React.useEffect(() => {
+    if (!containerElement) {
+      setScrollInfo(DEFAULT_SCROLL_INFO);
+      return;
+    }
+
     const handleScroll = (e: Event) => {
-      const target = e.target as HTMLDivElement;
+      const target = e.target as HTMLElement;
       if (currentTimeout.current) {
         clearTimeout(currentTimeout.current);
       }
@@ -95,31 +146,39 @@ export function useContainerScroll({
       }, options?.eventListenerTimeoutMs || 15);
     };
 
-    const containerElement = containerRef?.current;
-    if (containerElement) {
-      if (containerElement && eventListenerAdded.current === false) {
-        containerElement.addEventListener('scroll', handleScroll, {
-          passive: options?.passiveEventListener,
-        });
-      }
-      eventListenerAdded.current = true;
-    }
+    setScrollInfo(getElementScrollInfo(containerElement));
+    containerElement.addEventListener('scroll', handleScroll, {
+      passive: options?.passiveEventListener,
+    });
 
     return () => {
-      if (eventListenerAdded && containerElement) {
-        containerElement.removeEventListener('scroll', handleScroll);
+      if (currentTimeout.current) {
+        clearTimeout(currentTimeout.current);
       }
+
+      containerElement.removeEventListener('scroll', handleScroll);
     };
-  }, [containerRef]);
+  }, [
+    containerElement,
+    options?.eventListenerTimeoutMs,
+    options?.passiveEventListener,
+  ]);
   return scrollInfo;
 }
 
 export function useWindowScroll(options?: Options) {
-  const [scrollInfo, setScrollInfo] = React.useState(getScrollInfo());
-  const currentTimeout = React.useRef<NodeJS.Timeout | null>(null);
-  const eventListenerAdded = React.useRef(false);
+  const [scrollInfo, setScrollInfo] = React.useState<ScrollEvent>(() =>
+    getScrollInfo(),
+  );
+  const currentTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   React.useEffect(() => {
+    if (!hasWindow) {
+      return;
+    }
+
     const handleScroll = () => {
       if (currentTimeout.current) {
         clearTimeout(currentTimeout.current);
@@ -136,14 +195,15 @@ export function useWindowScroll(options?: Options) {
     window.addEventListener('scroll', handleScroll, {
       passive: options?.passiveEventListener,
     });
-    eventListenerAdded.current = true;
 
     return () => {
-      if (eventListenerAdded) {
-        window.removeEventListener('scroll', handleScroll);
+      if (currentTimeout.current) {
+        clearTimeout(currentTimeout.current);
       }
+
+      window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [options?.eventListenerTimeoutMs, options?.passiveEventListener]);
 
   return scrollInfo;
 }
