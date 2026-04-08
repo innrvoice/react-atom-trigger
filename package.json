@@ -1,6 +1,6 @@
 {
   "name": "react-atom-trigger",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Geometry-based scroll trigger for React with precise enter/leave control. A modern alternative to react-waypoint.",
   "keywords": [
     "intersection",
