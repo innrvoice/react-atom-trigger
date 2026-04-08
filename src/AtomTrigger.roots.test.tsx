@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AtomTrigger } from './index';
 import {
   CustomRootMarginHarness,
   finishDomTestRun,
@@ -12,6 +13,7 @@ import {
   setNodeEnv,
   setRect,
   setScrollAwareRect,
+  setWindowSize,
   setupChildRootHarness,
   setupMeasuredRootHarness,
   setupRootHarness,
@@ -42,6 +44,45 @@ describe('AtomTrigger roots and margins', () => {
     expect(event.type).toBe('leave');
     expect(event.position).toBe('above');
     expect(Math.round(event.entry.rootBounds?.top ?? 0)).toBe(100);
+  });
+
+  it('reports stationary movement when a viewport resize causes an enter', () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    let frameId = 0;
+    const flushFrames = () => {
+      for (const callback of frameCallbacks.splice(0)) {
+        callback(performance.now());
+      }
+    };
+
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      frameId += 1;
+      return frameId;
+    });
+
+    setWindowSize(1024, 200);
+    const onEnter = vi.fn();
+    const view = render(<AtomTrigger className="atom-trigger-sentinel" onEnter={onEnter} />);
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+
+    if (!(sentinel instanceof HTMLDivElement)) {
+      throw new Error('Viewport resize harness not found');
+    }
+
+    setRect(sentinel, () => new DOMRect(0, 220, 10, 10));
+    flushFrames();
+
+    expect(onEnter).toHaveBeenCalledTimes(0);
+
+    setWindowSize(1024, 240);
+    fireEvent(window, new Event('resize'));
+    flushFrames();
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    expect(onEnter.mock.calls[0][0].type).toBe('enter');
+    expect(onEnter.mock.calls[0][0].movementDirection).toBe('stationary');
+    expect(onEnter.mock.calls[0][0].position).toBe('inside');
   });
 
   it('supports a four-number rootMargin array in pixel order', () => {
@@ -179,6 +220,53 @@ describe('AtomTrigger roots and margins', () => {
     });
 
     expect(onEnter).toHaveBeenCalledTimes(1);
+    expect(onEnter.mock.calls[0][0].position).toBe('inside');
+  });
+
+  it('reports stationary movement when a root resize causes an enter', () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    let frameId = 0;
+    const flushFrames = () => {
+      for (const callback of frameCallbacks.splice(0)) {
+        callback(performance.now());
+      }
+    };
+
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      frameId += 1;
+      return frameId;
+    });
+
+    const onEnter = vi.fn();
+    const rootRef = React.createRef<HTMLDivElement>();
+    const view = render(
+      <div ref={rootRef} data-testid="resize-root">
+        <AtomTrigger className="atom-trigger-sentinel" rootRef={rootRef} onEnter={onEnter} />
+      </div>,
+    );
+    const root = view.getByTestId('resize-root');
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+
+    if (!(root instanceof HTMLDivElement) || !(sentinel instanceof HTMLDivElement)) {
+      throw new Error('Resize root harness not found');
+    }
+
+    let rootHeight = 200;
+
+    setRect(root, () => new DOMRect(0, 0, 200, rootHeight));
+    setRect(sentinel, () => new DOMRect(0, 220, 10, 10));
+    flushFrames();
+
+    expect(onEnter).toHaveBeenCalledTimes(0);
+
+    rootHeight = 240;
+    fireEvent(window, new Event('resize'));
+    flushFrames();
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    expect(onEnter.mock.calls[0][0].type).toBe('enter');
+    expect(onEnter.mock.calls[0][0].movementDirection).toBe('stationary');
     expect(onEnter.mock.calls[0][0].position).toBe('inside');
   });
 });
