@@ -48,6 +48,7 @@
     "lint": "oxlint . --ignore-pattern node_modules --ignore-pattern lib",
     "prepare": "node scripts/setup-git-hooks.mjs",
     "preview:sb": "pnpm build:sb && npx serve -s storybook-static -l 3000",
+    "start:storybook": "node scripts/serve-storybook.mjs",
     "precommit:checks": "pnpm format:check && pnpm lint && pnpm test",
     "test": "pnpm test:all",
     "test:all": "pnpm test:unit && pnpm test:storybook",
