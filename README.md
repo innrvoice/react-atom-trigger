@@ -1,84 +1,302 @@
 # react-atom-trigger
 
-AtomTrigger helps solve the problem of executing code when some element "scrolls into (or out of) view". A pretty simple "[react-waypoint](https://www.npmjs.com/package/react-waypoint)" alternative written in Typescript.
+`react-atom-trigger` helps with the usual "run some code when this thing enters or leaves view" problem.
+It is a lightweight React alternative to `react-waypoint`, written in TypeScript.
 
-## Basic features
+## v2 is a breaking release
 
+If you are coming from `v1.x`, please check [MIGRATION.md](./MIGRATION.md).
 
-Exposes `<AtomTrigger {...props} />` component, where `props` are:
+If you want to stay on the old API:
 
+```bash
+# pnpm
+pnpm add react-atom-trigger@^1
+
+# npm
+npm install react-atom-trigger@^1
+
+# yarn
+yarn add react-atom-trigger@^1
 ```
-interface IAtomTriggerProps {
-  scrollEvent: ScrollEvent;
-  dimensions: Dimensions;
-  behavior?: 'default' | 'enter' | 'leave';
-  callback: () => unknown;
-  getDebugInfo?: (data: DebugInfo) => void;
-  triggerOnce?: boolean;
-  className?: string;
-  offset?: [number, number, number, number];
+
+## Install
+
+```bash
+# pnpm
+pnpm add react-atom-trigger
+
+# npm
+npm install react-atom-trigger
+
+# yarn
+yarn add react-atom-trigger
+```
+
+## How it works
+
+`react-atom-trigger` uses a mixed approach.
+
+- Geometry is the real source of truth for `enter` and `leave`.
+- `IntersectionObserver` is only there to wake things up when the browser notices a layout shift.
+- `rootMargin` logic is handled by the library itself, so it stays consistent and does not depend on native observer quirks.
+
+In practice this means `AtomTrigger` reacts to:
+
+- scroll
+- window resize
+- root resize
+- sentinel resize
+- layout shifts that move the observed element even if no scroll event happened
+
+This is the main reason `v2` can support custom margin-aware behavior and still react to browser-driven layout changes.
+
+## Quick start
+
+```tsx
+import React from 'react';
+import { AtomTrigger } from 'react-atom-trigger';
+
+export function Example() {
+  return (
+    <AtomTrigger
+      onEnter={event => {
+        console.log('entered', event);
+      }}
+      onLeave={event => {
+        console.log('left', event);
+      }}
+      rootMargin="0px 0px 160px 0px"
+      oncePerDirection
+    />
+  );
 }
 ```
 
-In order to "work" `AtomTrigger` needs callback, dimensions and simple scroll event data provided.
+If you want an already-visible trigger to behave like a normal first `enter`, pass
+`fireOnInitialVisible`.
 
-### Callback
+```tsx
+import React from 'react';
+import { AtomTrigger } from 'react-atom-trigger';
 
-The function to be executed when AtomTrigger enters or leaves some container.
+export function RestoredScrollExample() {
+  return (
+    <AtomTrigger
+      fireOnInitialVisible
+      onEnter={event => {
+        if (event.isInitial) {
+          console.log('started visible after load');
+          return;
+        }
 
+        console.log('entered from scrolling');
+      }}
+    />
+  );
+}
 ```
-callback: () => unknown;
+
+## Child mode
+
+If you pass one top-level child, `AtomTrigger` observes that element directly instead of rendering its own sentinel.
+
+```tsx
+import React from 'react';
+import { AtomTrigger } from 'react-atom-trigger';
+
+export function HeroTrigger() {
+  return (
+    <AtomTrigger threshold={0.75} onEnter={() => console.log('hero is mostly visible')}>
+      <section style={{ minHeight: 240 }}>Hero content</section>
+    </AtomTrigger>
+  );
+}
 ```
 
+This is usually the better mode when `threshold` should depend on a real element size.
 
-### Dimensions
+Intrinsic elements such as `<div>` and `<section>` work automatically.
 
-Dimensions of the main "container" (window in many cases). 
+If you use a custom component, the ref that `AtomTrigger` passes down still has to reach a real DOM
+element:
 
+- in React 19, the component can receive `ref` as a prop and pass it through
+- in React 18 and older, use `React.forwardRef`
+
+If the ref never reaches a DOM node, child mode cannot observe anything.
+
+## API
+
+```ts
+interface AtomTriggerProps {
+  onEnter?: (event: AtomTriggerEvent) => void;
+  onLeave?: (event: AtomTriggerEvent) => void;
+  onEvent?: (event: AtomTriggerEvent) => void;
+  children?: React.ReactNode;
+  once?: boolean;
+  oncePerDirection?: boolean;
+  fireOnInitialVisible?: boolean;
+  disabled?: boolean;
+  threshold?: number;
+  root?: Element | null;
+  rootRef?: React.RefObject<Element | null>;
+  rootMargin?: string | [number, number, number, number];
+  className?: string;
+}
 ```
-type Dimensions = {
-  width: number;
-  height: number;
+
+### Props in short
+
+- `onEnter`, `onLeave`, `onEvent`: trigger callbacks with a rich event payload.
+- `children`: observe one real child element instead of the internal sentinel.
+- `once`: allow only the first transition overall.
+- `oncePerDirection`: allow one `enter` and one `leave`.
+- `fireOnInitialVisible`: emit an initial `enter` when observation starts and the trigger is already active.
+- `disabled`: stop observing without unmounting the component.
+- `threshold`: a number from `0` to `1`. It affects `enter`, not `leave`.
+- `root`: use a specific DOM element as the visible area.
+- `rootRef`: same idea as `root`, but better when the container is created in JSX. If both are passed, `rootRef` wins.
+- `rootMargin`: expand or shrink the effective root. String values use `IntersectionObserver`-style syntax. A four-number array is treated as `[top, right, bottom, left]` in pixels.
+- `className`: applies only to the internal sentinel.
+
+## Event payload
+
+```ts
+type AtomTriggerEvent = {
+  type: 'enter' | 'leave';
+  isInitial: boolean;
+  entry: AtomTriggerEntry;
+  counts: {
+    entered: number;
+    left: number;
+  };
+  movementDirection: 'up' | 'down' | 'left' | 'right' | 'stationary' | 'unknown';
+  position: 'inside' | 'above' | 'below' | 'left' | 'right' | 'outside';
+  timestamp: number;
 };
 ```
 
-So if you have some logic of calculating container size and container resize handling, just provide needed data to AtomTrigger.
-
-### Scroll Event
- 
-To trigger "events" `AtomTrigger` needs some kind of simple scroll event provided.
-
-```
-type ScrollEvent = { 
-    scrollX: number; 
-    scrollY: number;
+```ts
+type AtomTriggerEntry = {
+  target: Element;
+  rootBounds: DOMRectReadOnly | null;
+  boundingClientRect: DOMRectReadOnly;
+  intersectionRect: DOMRectReadOnly;
+  isIntersecting: boolean;
+  intersectionRatio: number;
+  source: 'geometry';
 };
 ```
 
-So, if you already have some scroll event listener, just provide it to AtomTrigger.
+The payload is library-owned geometry data. It is not a native `IntersectionObserverEntry`.
 
-## Utility hooks
-For someone who wants everything out-of-the-box, `useWindowDimensions`, `useWindowScroll` and `useContainerScroll` hooks are also available for import.
+`isInitial` is `true` only for the synthetic first `enter` created by
+`fireOnInitialVisible`.
 
-## Build
+## Hooks
+
+For someone who wants everything out-of-the-box, `useScrollPosition` and `useViewportSize` are also available.
+
+```ts
+useScrollPosition(options?: {
+  target?: Window | HTMLElement | React.RefObject<HTMLElement | null>;
+  passive?: boolean;
+  throttleMs?: number;
+  enabled?: boolean;
+}): { x: number; y: number }
+```
+
+```ts
+useViewportSize(options?: {
+  passive?: boolean;
+  throttleMs?: number;
+  enabled?: boolean;
+}): { width: number; height: number }
+```
+
+Both hooks are SSR-safe. Default throttling is `16ms`.
+
+## Notes
+
+- In sentinel mode, `threshold` is usually only interesting if your sentinel has real width or height. The default sentinel is almost point-like.
+- Child mode needs exactly one top-level child and any custom component used there needs to pass the received ref through to a DOM element.
+- In React 19, a plain function component can also work in child mode if it passes the received `ref` prop through to a DOM element.
+- `rootMargin` is handled by the library geometry logic. `IntersectionObserver` is only used as a wake-up signal for layout shifts.
+
+## Migration from v1
+
+The short version:
+
+1. `callback` became `onEnter`, `onLeave` and `onEvent`.
+2. `behavior` is gone.
+3. `triggerOnce` became `once` or `oncePerDirection`.
+4. `scrollEvent`, `dimensions` and `offset` are gone.
+5. `useWindowScroll` / `useContainerScroll` became `useScrollPosition`.
+6. `useWindowDimensions` became `useViewportSize`.
+
+For the real upgrade notes and examples, see [MIGRATION.md](./MIGRATION.md).
+
+## Build output
+
 This package is built with `tsdown`.
-
-Build output:
 
 ```text
 lib/index.js
-lib/index.es.js
+lib/index.umd.js
 lib/index.d.ts
 ```
 
-## UMD global
 When the UMD bundle is loaded directly in the browser, the library is exposed as `window.reactAtomTrigger`.
 
 ## Examples
-It is sometimes better to tweak and see for yourself: [CodeSandbox examples](https://codesandbox.io/examples/package/react-atom-trigger).
 
- [**More detailed react-atom-trigger overview with examples**](https://visiofutura.com/solving-scroll-into-view-problem-in-react-my-way-a8056a1bdc11)
+### Storybook
 
+Storybook is the easiest way to see how the component behaves.
 
+- `AtomTrigger Demo`: regular usage examples.
+- `Extended Demo`: a larger animated interaction demo that shows AtomTrigger driving scene changes,
+  event timing and more realistic scroll-based UI behavior.
+- `Internal Tests`: interaction stories used for local checks and Storybook tests.
 
+To run Storybook locally:
 
+```bash
+pnpm storybook
+```
+
+### CodeSandbox
+
+Quick way to tweak it in the browser.
+
+- [Basic sentinel example](https://codesandbox.io/p/sandbox/react-atom-trigger-v2-basic-example-9xrzmg)
+- [Child mode threshold example](https://codesandbox.io/p/sandbox/react-atom-trigger-v2-child-mode-threshold-qcpv28)
+- [Fixed header offset example](https://codesandbox.io/p/devbox/react-atom-trigger-v2-fixed-header-offset-62lmrv)
+- [Initial visible on load example](https://codesandbox.io/p/devbox/react-atom-trigger-v2-initial-visible-on-load-ncqjtf)
+- [Horizontal scroll container example](https://codesandbox.io/p/devbox/react-atom-trigger-v2-horizontal-scroll-container-hs33gq)
+
+## Development
+
+```bash
+pnpm install
+pnpm lint
+pnpm test
+pnpm test:storybook
+pnpm build
+pnpm format:check
+```
+
+## Storybook (Static Build)
+
+Build:
+
+```bash
+pnpm build:sb
+```
+
+Output:
+
+`storybook-static/`
+
+This directory is used for deployment to `storybook.atomtrigger.dev`.

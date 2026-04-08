@@ -1,0 +1,38 @@
+.root {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.transition {
+  transition:
+    fill 1.15s ease,
+    stop-color 1.15s ease,
+    opacity 1.15s ease,
+    transform 1.15s ease,
+    filter 1.15s ease;
+}
+
+.celestial {
+  transform-box: fill-box;
+  transform-origin: center center;
+  transition:
+    transform 1.2s ease,
+    opacity 1.2s ease,
+    filter 1.2s ease;
+}
+
+.sun,
+.moon,
+.seaBeam {
+  will-change: transform, opacity;
+}
+
+.seaBeam {
+  transform-box: fill-box;
+  transform-origin: center 38%;
+  transition:
+    opacity 1.2s ease,
+    transform 1.2s ease,
+    filter 1.2s ease;
+}

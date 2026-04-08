@@ -17,13 +17,13 @@ export default defineConfig({
   outExtensions: ({ format }) => {
     if (format === 'es') {
       return {
-        js: '.es.js',
+        js: '.js',
         dts: '.d.ts',
       };
     }
 
     return {
-      js: '.js',
+      js: '.umd.js',
     };
   },
   outputOptions: (options, format) => {
@@ -36,8 +36,8 @@ export default defineConfig({
       return {
         ...options,
         globals,
-        entryFileNames: '[name].js',
-        chunkFileNames: '[name]-chunk.js',
+        entryFileNames: '[name].umd.js',
+        chunkFileNames: '[name]-chunk.umd.js',
       };
     }
 

@@ -1,137 +1,262 @@
 import React from 'react';
-import { IAtomTriggerProps } from './AtomTrigger.types';
+import type { AtomTriggerProps } from './AtomTrigger.types';
+import { assignRef, getInvalidChildWarning } from './AtomTrigger.childMode';
+import { normalizeRootMargin, normalizeThreshold } from './AtomTrigger.geometry';
+import {
+  type SchedulerTarget,
+  type SentinelRegistration,
+  registerSentinel,
+  resetObservationState,
+  resolveSchedulerTarget,
+} from './AtomTrigger.scheduler';
+import {
+  childModeClassNameWarning,
+  nonDomChildRefWarning,
+  unsupportedChildRefWarning,
+  upgradeBehaviorWarning,
+  warnOnce,
+} from './AtomTrigger.warnings';
 
-const useIsomorphicLayoutEffect =
-  typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+const defaultSentinelStyle = { display: 'table' } satisfies React.CSSProperties;
 
-const AtomTrigger: React.FC<IAtomTriggerProps> = ({
-  scrollEvent,
-  callback,
-  getDebugInfo,
-  triggerOnce = false,
+const AtomTrigger: React.FC<AtomTriggerProps> = ({
+  onEnter,
+  onLeave,
+  onEvent,
+  children,
+  once = false,
+  oncePerDirection = false,
+  fireOnInitialVisible = false,
+  disabled = false,
+  threshold = 0,
+  root = null,
+  rootRef,
+  rootMargin = '0px',
   className,
-  behavior = 'default',
-  dimensions,
-  offset = [0, 0, 0, 0],
 }) => {
-  const atomTriggerRef = React.useRef<HTMLDivElement>(null);
-  const [triggerPosition, setTriggerPosition] = React.useState<
-    'inViewport' | 'top' | 'bottom' | undefined
-  >(undefined);
-  const previousPositionState = React.useRef<
-    'inViewport' | 'top' | 'bottom' | undefined
-  >(undefined);
+  const sentinelRef = React.useRef<HTMLDivElement>(null);
+  const [childNode, setChildNode] = React.useState<Element | null>(null);
+  const childNodeRef = React.useRef<Element | null>(null);
+  const registrationRef = React.useRef<SentinelRegistration | null>(null);
+  const disposeRef = React.useRef<(() => void) | null>(null);
+  const bindingRef = React.useRef<{
+    node: Element;
+    target: SchedulerTarget;
+    rootMargin: string;
+    threshold: number;
+    once: boolean;
+    oncePerDirection: boolean;
+    fireOnInitialVisible: boolean;
+  } | null>(null);
 
-  const [timesTriggered, setTimesTriggered] = React.useState({
-    leftViewport: 0,
-    enteredViewport: 0,
-  });
+  const normalizedRootMargin = normalizeRootMargin(rootMargin);
+  const normalizedThreshold = normalizeThreshold(threshold);
 
-  useIsomorphicLayoutEffect(() => {
-    if (atomTriggerRef.current) {
-      const triggerElement = atomTriggerRef.current;
-      const elementDOMRect = triggerElement.getBoundingClientRect();
-      const [offsetTop, offsetRight, offsetBottom, offsetLeft] = offset;
+  const hasObservedChild = children !== null && children !== undefined;
+  const childCount = React.Children.count(children);
+  const singleChildElement = childCount === 1 && React.isValidElement(children) ? children : null;
+  const childType = singleChildElement ? singleChildElement.type : null;
 
-      if (
-        elementDOMRect.top > offsetTop &&
-        elementDOMRect.bottom < dimensions.height - offsetBottom &&
-        elementDOMRect.left > offsetLeft &&
-        elementDOMRect.right < dimensions.width - offsetRight
-      ) {
-        setTriggerPosition('inViewport');
-      } else if (elementDOMRect.top > dimensions.height - offsetBottom) {
-        setTriggerPosition('bottom');
-      } else {
-        setTriggerPosition('top');
-      }
-    }
-  }, [atomTriggerRef, scrollEvent, dimensions, offset]);
-
-  useIsomorphicLayoutEffect(() => {
-    if (
-      previousPositionState.current === undefined &&
-      triggerPosition !== undefined
-    ) {
-      previousPositionState.current = triggerPosition;
-    }
-
-    if (
-      triggerPosition === 'inViewport' &&
-      (previousPositionState.current === 'bottom' ||
-        previousPositionState.current === 'top')
-    ) {
-      if (
-        (behavior === 'enter' &&
-          (!triggerOnce ||
-            (triggerOnce && timesTriggered.enteredViewport === 0))) ||
-        (behavior === 'default' &&
-          (!triggerOnce ||
-            (triggerOnce &&
-              (timesTriggered.enteredViewport < 1 ||
-                timesTriggered.leftViewport < 1))))
-      ) {
-        if (callback) {
-          callback();
-        }
-        const updatedTimes = {
-          ...timesTriggered,
-          enteredViewport: timesTriggered.enteredViewport + 1,
-        };
-        if (getDebugInfo) {
-          getDebugInfo({
-            timesTriggered: updatedTimes,
-            trigger: 'entered',
-          });
-        }
-        setTimesTriggered(updatedTimes);
-      }
-
-      previousPositionState.current = triggerPosition;
-    }
-
-    if (
-      (triggerPosition === 'top' || triggerPosition === 'bottom') &&
-      previousPositionState.current === 'inViewport'
-    ) {
-      previousPositionState.current = triggerPosition;
-
-      if (
-        (behavior === 'leave' &&
-          (!triggerOnce ||
-            (triggerOnce && timesTriggered.leftViewport === 0))) ||
-        (behavior === 'default' &&
-          (!triggerOnce ||
-            (triggerOnce &&
-              (timesTriggered.leftViewport < 1 ||
-                timesTriggered.enteredViewport < 1))))
-      ) {
-        if (callback) {
-          callback();
-        }
-
-        const updatedTimes = {
-          ...timesTriggered,
-          leftViewport: timesTriggered.leftViewport + 1,
-        };
-        if (getDebugInfo) {
-          getDebugInfo({
-            timesTriggered: updatedTimes,
-            trigger: 'left',
-          });
-        }
-        setTimesTriggered(updatedTimes);
-      }
-    }
-  }, [triggerPosition, callback, triggerOnce, behavior, getDebugInfo]);
-
-  return (
-    <div
-      ref={atomTriggerRef}
-      style={{ display: 'table' }}
-      className={className}
-    />
+  const invalidChildWarning = getInvalidChildWarning(
+    hasObservedChild,
+    childCount,
+    singleChildElement,
+    childType,
   );
+
+  const childElementWithRef =
+    invalidChildWarning || !singleChildElement
+      ? null
+      : (singleChildElement as React.ReactElement<{ ref?: React.Ref<unknown> }>);
+  const originalChildRef = childElementWithRef?.props.ref;
+
+  const attachObservedChildRef = React.useCallback(
+    (value: unknown) => {
+      assignRef(originalChildRef, value);
+
+      if (value === null) {
+        childNodeRef.current = null;
+        setChildNode(currentNode => (currentNode === null ? currentNode : null));
+        return;
+      }
+
+      if (value instanceof Element) {
+        childNodeRef.current = value;
+        setChildNode(currentNode => (currentNode === value ? currentNode : value));
+        return;
+      }
+
+      childNodeRef.current = null;
+      setChildNode(currentNode => (currentNode === null ? currentNode : null));
+      warnOnce(nonDomChildRefWarning);
+    },
+    [originalChildRef],
+  );
+
+  React.useEffect(() => {
+    warnOnce(upgradeBehaviorWarning);
+  }, []);
+
+  React.useEffect(() => {
+    if (hasObservedChild && className) {
+      warnOnce(childModeClassNameWarning);
+    }
+  }, [className, hasObservedChild]);
+
+  React.useEffect(() => {
+    if (invalidChildWarning) {
+      warnOnce(invalidChildWarning);
+    }
+  }, [invalidChildWarning]);
+
+  React.useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      !hasObservedChild ||
+      !childElementWithRef ||
+      invalidChildWarning ||
+      childNode
+    ) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (!childNodeRef.current) {
+        warnOnce(unsupportedChildRefWarning);
+      }
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [childNode, childElementWithRef, hasObservedChild, invalidChildWarning]);
+
+  React.useEffect(() => {
+    const registration = registrationRef.current;
+    if (!registration) {
+      return;
+    }
+
+    registration.onEnter = onEnter;
+    registration.onLeave = onLeave;
+    registration.onEvent = onEvent;
+  }, [onEnter, onLeave, onEvent]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const node = hasObservedChild ? childNode : sentinelRef.current;
+    const resolvedRoot = resolveSchedulerTarget(root, rootRef);
+
+    if (!node) {
+      if (registrationRef.current) {
+        resetObservationState(registrationRef.current);
+      }
+      disposeRef.current?.();
+      disposeRef.current = null;
+      bindingRef.current = null;
+      return;
+    }
+
+    if (!registrationRef.current) {
+      registrationRef.current = {
+        node,
+        rootMargin: normalizedRootMargin,
+        threshold: normalizedThreshold,
+        once,
+        oncePerDirection,
+        fireOnInitialVisible,
+        onEnter,
+        onLeave,
+        onEvent,
+        previousTriggerActive: undefined,
+        previousRect: null,
+        counts: {
+          entered: 0,
+          left: 0,
+        },
+      } satisfies SentinelRegistration;
+    } else {
+      registrationRef.current.node = node;
+      registrationRef.current.rootMargin = normalizedRootMargin;
+      registrationRef.current.threshold = normalizedThreshold;
+      registrationRef.current.once = once;
+      registrationRef.current.oncePerDirection = oncePerDirection;
+      registrationRef.current.fireOnInitialVisible = fireOnInitialVisible;
+    }
+
+    const registration = registrationRef.current;
+
+    if (disabled || !resolvedRoot) {
+      resetObservationState(registration);
+      disposeRef.current?.();
+      disposeRef.current = null;
+      bindingRef.current = null;
+      return;
+    }
+
+    const previousBinding = bindingRef.current;
+    const nextBinding = {
+      node,
+      target: resolvedRoot,
+      rootMargin: normalizedRootMargin,
+      threshold: normalizedThreshold,
+      once,
+      oncePerDirection,
+      fireOnInitialVisible,
+    };
+
+    const shouldResubscribe =
+      !previousBinding ||
+      previousBinding.node !== nextBinding.node ||
+      previousBinding.target !== nextBinding.target ||
+      previousBinding.rootMargin !== nextBinding.rootMargin ||
+      previousBinding.threshold !== nextBinding.threshold ||
+      previousBinding.once !== nextBinding.once ||
+      previousBinding.oncePerDirection !== nextBinding.oncePerDirection ||
+      previousBinding.fireOnInitialVisible !== nextBinding.fireOnInitialVisible;
+
+    if (shouldResubscribe) {
+      resetObservationState(registration);
+      disposeRef.current?.();
+      disposeRef.current = registerSentinel(resolvedRoot, registration);
+      bindingRef.current = nextBinding;
+    }
+  }, [
+    disabled,
+    normalizedRootMargin,
+    normalizedThreshold,
+    once,
+    oncePerDirection,
+    fireOnInitialVisible,
+    childNode,
+    root,
+    rootRef?.current,
+    hasObservedChild,
+  ]);
+
+  React.useEffect(
+    () => () => {
+      disposeRef.current?.();
+      disposeRef.current = null;
+      bindingRef.current = null;
+    },
+    [],
+  );
+
+  if (!hasObservedChild) {
+    return <div ref={sentinelRef} style={defaultSentinelStyle} className={className} />;
+  }
+
+  if (!childElementWithRef) {
+    return <>{children}</>;
+  }
+
+  return React.cloneElement(childElementWithRef, {
+    ref: attachObservedChildRef,
+  });
 };
 
 export default AtomTrigger;
