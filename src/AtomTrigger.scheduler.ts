@@ -16,6 +16,8 @@ import {
 
 export type SchedulerTarget = Window | Element;
 
+type SampleCause = 'geometry-change' | 'root-change' | 'scroll';
+
 export type SentinelRegistration = {
   node: Element;
   rootMargin: string;
@@ -35,9 +37,11 @@ export type SentinelRegistration = {
 type RootScheduler = {
   registrations: Set<SentinelRegistration>;
   rafId: number;
+  pendingSampleCause: SampleCause | null;
+  previousBaseRootBounds: DOMRectReadOnly | null;
   resizeObserver: ResizeObserver | null;
   intersectionObserver: IntersectionObserver | null;
-  queueSample: () => void;
+  queueSample: (cause?: SampleCause) => void;
   cleanup: () => void;
 };
 
@@ -94,6 +98,8 @@ export function resetObservationState(registration: SentinelRegistration): void 
 function sampleRegistration(
   registration: SentinelRegistration,
   baseRootBounds: DOMRectReadOnly,
+  sampleCause: SampleCause,
+  rootBoundsChanged: boolean,
 ): void {
   const rect = normalizeTargetRect(registration.node.getBoundingClientRect());
   const effectiveRootBounds = getEffectiveRootBounds(baseRootBounds, registration.rootMargin);
@@ -107,7 +113,10 @@ function sampleRegistration(
       : registration.threshold === 0
         ? isVisible
         : intersectionRatio >= registration.threshold;
-  const movementDirection = getMovementDirection(registration.previousRect, rect);
+  const movementDirection =
+    registration.previousRect && (sampleCause === 'root-change' || rootBoundsChanged)
+      ? 'stationary'
+      : getMovementDirection(registration.previousRect, rect);
 
   registration.previousRect = rect;
   registration.previousTriggerActive = nextTriggerActive;
@@ -170,6 +179,8 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
   const scheduler: RootScheduler = {
     registrations: new Set<SentinelRegistration>(),
     rafId: 0,
+    pendingSampleCause: null,
+    previousBaseRootBounds: null,
     resizeObserver: null,
     intersectionObserver: null,
     queueSample: () => {},
@@ -180,19 +191,43 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
     scheduler.rafId = 0;
 
     if (scheduler.registrations.size === 0) {
+      scheduler.pendingSampleCause = null;
       return;
     }
 
+    const sampleCause = scheduler.pendingSampleCause ?? 'geometry-change';
+    scheduler.pendingSampleCause = null;
     const baseRootBounds = isWindowTarget(target)
       ? createViewportRootBounds()
       : target.getBoundingClientRect();
+    const rootBoundsChanged =
+      scheduler.previousBaseRootBounds !== null &&
+      (scheduler.previousBaseRootBounds.top !== baseRootBounds.top ||
+        scheduler.previousBaseRootBounds.left !== baseRootBounds.left ||
+        scheduler.previousBaseRootBounds.width !== baseRootBounds.width ||
+        scheduler.previousBaseRootBounds.height !== baseRootBounds.height);
 
     for (const registration of scheduler.registrations) {
-      sampleRegistration(registration, baseRootBounds);
+      sampleRegistration(registration, baseRootBounds, sampleCause, rootBoundsChanged);
     }
+
+    scheduler.previousBaseRootBounds = new DOMRect(
+      baseRootBounds.left,
+      baseRootBounds.top,
+      baseRootBounds.width,
+      baseRootBounds.height,
+    );
   };
 
-  const queueSample = () => {
+  const queueSample = (cause: SampleCause = 'geometry-change') => {
+    if (
+      scheduler.pendingSampleCause === null ||
+      (scheduler.pendingSampleCause === 'geometry-change' && cause !== 'geometry-change') ||
+      (scheduler.pendingSampleCause === 'root-change' && cause === 'scroll')
+    ) {
+      scheduler.pendingSampleCause = cause;
+    }
+
     if (scheduler.rafId !== 0) {
       return;
     }
@@ -208,11 +243,14 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
     }
   };
 
+  const handleScroll = () => {
+    queueSample('scroll');
+  };
   const handleRootChange = () => {
-    queueSample();
+    queueSample('root-change');
   };
 
-  target.addEventListener('scroll', handleRootChange, { passive: true });
+  target.addEventListener('scroll', handleScroll, { passive: true });
   window.addEventListener('resize', handleRootChange);
 
   if (typeof ResizeObserver !== 'undefined') {
@@ -226,7 +264,7 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
   if (typeof IntersectionObserver !== 'undefined') {
     scheduler.intersectionObserver = new IntersectionObserver(
       () => {
-        queueSample();
+        queueSample('geometry-change');
       },
       {
         root: isWindowTarget(target) ? null : target,
@@ -246,10 +284,12 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
       scheduler.rafId = 0;
     }
 
-    target.removeEventListener('scroll', handleRootChange);
+    target.removeEventListener('scroll', handleScroll);
     window.removeEventListener('resize', handleRootChange);
     scheduler.resizeObserver?.disconnect();
     scheduler.intersectionObserver?.disconnect();
+    scheduler.pendingSampleCause = null;
+    scheduler.previousBaseRootBounds = null;
   };
 
   return scheduler;
