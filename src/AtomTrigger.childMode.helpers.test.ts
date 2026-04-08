@@ -1,10 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  assignRef,
-  getInvalidChildWarning,
-  supportsObservationRef,
-} from './AtomTrigger.childMode';
+import { assignRef, getInvalidChildWarning, supportsObservationRef } from './AtomTrigger.childMode';
 import {
   fragmentChildWarning,
   invalidChildCountWarning,
