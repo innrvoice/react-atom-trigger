@@ -2,5 +2,11 @@
 !.vscode/launch.json
 yarn-error.log
 node_modules
+.pnpm-store
+.npm-cache
 lib
+storybook-static
+debug-storybook.log
 .DS_Store
+*storybook.log
+storybook-static

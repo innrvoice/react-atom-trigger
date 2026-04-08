@@ -1,0 +1,17 @@
+:root,
+html,
+body,
+#root,
+#storybook-root {
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    'Noto Sans',
+    'Liberation Sans',
+    sans-serif !important;
+}

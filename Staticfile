@@ -1,0 +1,2 @@
+root: storybook-static
+index_fallback: true
