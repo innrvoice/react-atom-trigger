@@ -268,6 +268,9 @@ To run Storybook locally:
 pnpm storybook
 ```
 
+The latest Storybook build for `react-atom-trigger` is also available at
+[storybook.atomtrigger.dev](https://storybook.atomtrigger.dev/).
+
 ### CodeSandbox
 
 Quick way to tweak it in the browser.
