@@ -11,6 +11,23 @@ const storybookUrl = process.env.SB_URL || 'http://localhost:6006';
 export default defineConfig({
   root: dirname,
   test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'json-summary'],
+      reportsDirectory: 'coverage',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.d.ts',
+        'src/**/*.types.ts',
+        'src/**/*.stories.{ts,tsx}',
+        'src/**/*.test.{ts,tsx}',
+        'src/**/*.module.css',
+        'src/**/*.testUtils.{ts,tsx}',
+        'src/index.ts',
+        'src/stories/**',
+        'src/types/**',
+      ],
+    },
     projects: [
       defineProject({
         test: {
