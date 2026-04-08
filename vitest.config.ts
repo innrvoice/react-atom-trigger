@@ -12,7 +12,6 @@ export default defineConfig({
   root: dirname,
   test: {
     coverage: {
-      all: true,
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: 'coverage',
