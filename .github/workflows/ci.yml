@@ -38,16 +38,21 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
-      - name: Run coverage suite
-        run: pnpm test:coverage
+      - name: Run unit coverage
+        run: pnpm test:coverage:unit
+
+      - name: Run Storybook regression checks
+        run: pnpm test:storybook
 
       - name: Upload coverage to Codecov
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage/unit/lcov.info,coverage/storybook/lcov.info
+          files: coverage/unit/lcov.info
           fail_ci_if_error: true
 
       - name: Build package
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm build
