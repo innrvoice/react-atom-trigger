@@ -56,9 +56,6 @@ jobs:
     name: Storybook Browser Checks
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    container:
-      image: mcr.microsoft.com/playwright:v1.59.1-noble
-      options: --user 1001 --ipc=host
 
     steps:
       - name: Checkout
@@ -75,6 +72,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser (Chromium)
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run Storybook regression checks
         env:
