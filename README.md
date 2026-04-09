@@ -1,6 +1,7 @@
 # react-atom-trigger
 
 [![codecov](https://codecov.io/gh/innrvoice/react-atom-trigger/branch/master/graph/badge.svg)](https://codecov.io/gh/innrvoice/react-atom-trigger)
+[![bundle size](https://codecov.io/github/innrvoice/react-atom-trigger/branch/master/graph/bundle/react-atom-trigger-esm/badge.svg)](https://app.codecov.io/github/innrvoice/react-atom-trigger/bundles/master/react-atom-trigger-esm)
 
 `react-atom-trigger` helps with the usual "run some code when this thing enters or leaves view" problem.
 It is a lightweight React alternative to `react-waypoint`, written in TypeScript.
