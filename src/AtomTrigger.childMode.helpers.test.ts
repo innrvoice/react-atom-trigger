@@ -12,50 +12,77 @@ describe('AtomTrigger child mode helpers', () => {
     vi.restoreAllMocks();
   });
 
-  it('assigns callback and object refs', () => {
-    const callbackRef = vi.fn();
-    const objectRef = { current: null as HTMLDivElement | null };
-    const node = document.createElement('div');
+  describe('assignRef', () => {
+    it('passes the node through callback refs', () => {
+      const callbackRef = vi.fn();
+      const node = document.createElement('div');
 
-    assignRef(callbackRef, node);
-    assignRef(objectRef, node);
+      assignRef(callbackRef, node);
 
-    expect(callbackRef).toHaveBeenCalledWith(node);
-    expect(objectRef.current).toBe(node);
+      expect(callbackRef).toHaveBeenCalledWith(node);
+    });
+
+    it('stores the node on object refs', () => {
+      const objectRef = { current: null as HTMLDivElement | null };
+      const node = document.createElement('div');
+
+      assignRef(objectRef, node);
+
+      expect(objectRef.current).toBe(node);
+    });
+
+    it('ignores missing refs', () => {
+      expect(() => assignRef(undefined, document.createElement('div'))).not.toThrow();
+    });
   });
 
-  it('supports intrinsic, function, forwardRef, and memo-wrapped forwardRef child types', () => {
-    const FunctionChild = () => null;
-    const ForwardRefChild = React.forwardRef<HTMLDivElement>((_props, _ref) => null);
-    const MemoForwardRefChild = React.memo(ForwardRefChild);
+  describe('supportsObservationRef', () => {
+    it('supports intrinsic elements and function components', () => {
+      const FunctionChild = () => null;
 
-    expect(supportsObservationRef('div')).toBe(true);
-    expect(supportsObservationRef(FunctionChild)).toBe(true);
-    expect(supportsObservationRef(ForwardRefChild)).toBe(true);
-    expect(supportsObservationRef(MemoForwardRefChild)).toBe(true);
+      expect(supportsObservationRef('div')).toBe(true);
+      expect(supportsObservationRef(FunctionChild)).toBe(true);
+    });
+
+    it('supports forwardRef children and memo-wrapped forwardRef children', () => {
+      const ForwardRefChild = React.forwardRef<HTMLDivElement>((_props, _ref) => null);
+      const MemoForwardRefChild = React.memo(ForwardRefChild);
+
+      expect(supportsObservationRef(ForwardRefChild)).toBe(true);
+      expect(supportsObservationRef(MemoForwardRefChild)).toBe(true);
+    });
+
+    it('rejects unsupported child types', () => {
+      expect(supportsObservationRef(null)).toBe(false);
+      expect(supportsObservationRef(42)).toBe(false);
+      expect(supportsObservationRef({})).toBe(false);
+    });
   });
 
-  it('rejects unsupported child types', () => {
-    expect(supportsObservationRef(null)).toBe(false);
-    expect(supportsObservationRef(42)).toBe(false);
-    expect(supportsObservationRef({})).toBe(false);
-  });
-
-  it('returns the expected warning for invalid child mode inputs', () => {
+  describe('getInvalidChildWarning', () => {
     const childElement = React.createElement('div');
 
-    expect(getInvalidChildWarning(false, 1, childElement, 'div')).toBeNull();
-    expect(getInvalidChildWarning(true, 2, childElement, 'div')).toBe(invalidChildCountWarning);
-    expect(getInvalidChildWarning(true, 1, null, null)).toBe(invalidChildElementWarning);
-    expect(getInvalidChildWarning(true, 1, childElement, React.Fragment)).toBe(
-      fragmentChildWarning,
-    );
-  });
+    it('stays silent when child observation is not in use', () => {
+      expect(getInvalidChildWarning(false, 1, childElement, 'div')).toBeNull();
+    });
 
-  it('keeps unsupported child types silent at the helper level', () => {
-    const childElement = React.createElement('div');
+    it('warns when more than one top-level child is passed', () => {
+      expect(getInvalidChildWarning(true, 2, childElement, 'div')).toBe(invalidChildCountWarning);
+    });
 
-    expect(getInvalidChildWarning(true, 1, childElement, null)).toBeNull();
-    expect(getInvalidChildWarning(true, 1, childElement, {})).toBeNull();
+    it('warns when the child is not a React element', () => {
+      expect(getInvalidChildWarning(true, 1, null, null)).toBe(invalidChildElementWarning);
+    });
+
+    it('warns when the child is a fragment', () => {
+      expect(getInvalidChildWarning(true, 1, childElement, React.Fragment)).toBe(
+        fragmentChildWarning,
+      );
+    });
+
+    it('keeps unsupported child types silent at the helper level', () => {
+      expect(getInvalidChildWarning(true, 1, childElement, null)).toBeNull();
+      expect(getInvalidChildWarning(true, 1, childElement, {})).toBeNull();
+    });
   });
 });

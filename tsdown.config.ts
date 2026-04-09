@@ -1,4 +1,8 @@
+import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import { defineConfig } from 'tsdown';
+
+const codecovToken = process.env.CODECOV_TOKEN;
+const enableBundleAnalysis = process.env.CI === 'true' && Boolean(codecovToken);
 
 export default defineConfig({
   entry: './src/index.ts',
@@ -14,6 +18,11 @@ export default defineConfig({
   deps: {
     neverBundle: ['react'],
   },
+  plugins: codecovRollupPlugin({
+    enableBundleAnalysis,
+    bundleName: 'react-atom-trigger',
+    uploadToken: codecovToken,
+  }),
   outExtensions: ({ format }) => {
     if (format === 'es') {
       return {

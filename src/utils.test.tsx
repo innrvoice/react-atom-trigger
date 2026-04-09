@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useScrollPosition, useViewportSize } from './index';
 import {
   finishDomTestRun,
   prepareDomTestRun,
@@ -13,6 +14,38 @@ import {
   ViewportSizeHarness,
   WindowScrollPositionHarness,
 } from './AtomTrigger.testUtils';
+
+function ElementScrollPositionHarness({
+  target,
+  throttleMs,
+}: {
+  target: HTMLElement;
+  throttleMs: number;
+}) {
+  const position = useScrollPosition({ target, throttleMs });
+
+  return (
+    <output data-testid="element-scroll-position">
+      {position.x},{position.y}
+    </output>
+  );
+}
+
+function DisabledViewportSizeHarness({
+  enabled,
+  throttleMs,
+}: {
+  enabled: boolean;
+  throttleMs: number;
+}) {
+  const size = useViewportSize({ enabled, throttleMs });
+
+  return (
+    <output data-testid="disabled-viewport-size">
+      {size.width},{size.height}
+    </output>
+  );
+}
 
 beforeEach(() => {
   prepareDomTestRun();
@@ -64,6 +97,21 @@ describe('utility hooks', () => {
     });
 
     expect(position.textContent).toBe('7,44');
+  });
+
+  it('tracks scroll position for an explicit HTMLElement target', () => {
+    const target = document.createElement('div');
+    setElementScroll(target, 2, 8);
+
+    const view = render(<ElementScrollPositionHarness target={target} throttleMs={0} />);
+    const position = view.getByTestId('element-scroll-position');
+
+    expect(position.textContent).toBe('2,8');
+
+    setElementScroll(target, 6, 18);
+    fireEvent.scroll(target);
+
+    expect(position.textContent).toBe('6,18');
   });
 
   it('resets useScrollPosition to 0,0 when a ref target disappears', () => {
@@ -199,5 +247,46 @@ describe('utility hooks', () => {
     });
 
     expect(size.textContent).toBe('1300,768');
+  });
+
+  it('cancels a pending throttled scroll update when the listener unmounts', () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+    const target = document.createElement('div');
+    setElementScroll(target, 0, 0);
+
+    const view = render(<ElementScrollPositionHarness target={target} throttleMs={100} />);
+
+    act(() => {
+      setElementScroll(target, 5, 10);
+      fireEvent.scroll(target);
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(20);
+      setElementScroll(target, 8, 20);
+      fireEvent.scroll(target);
+    });
+
+    view.unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+  });
+
+  it('keeps viewport size fixed when the hook is disabled', () => {
+    vi.useFakeTimers();
+
+    const view = render(<DisabledViewportSizeHarness enabled={false} throttleMs={0} />);
+    const size = view.getByTestId('disabled-viewport-size');
+
+    expect(size.textContent).toBe('1024,768');
+
+    act(() => {
+      setWindowSize(1400, 900);
+      fireEvent.resize(window);
+      vi.runAllTimers();
+    });
+
+    expect(size.textContent).toBe('1024,768');
   });
 });

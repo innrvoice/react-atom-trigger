@@ -31,6 +31,39 @@ afterEach(() => {
 });
 
 describe('AtomTrigger roots and margins', () => {
+  it('uses an explicit root element when root is passed directly', () => {
+    const onEnter = vi.fn();
+
+    function ExplicitRootHarness() {
+      const [root, setRoot] = React.useState<HTMLDivElement | null>(null);
+
+      return (
+        <div ref={setRoot} data-testid="explicit-root">
+          {root ? (
+            <AtomTrigger className="atom-trigger-sentinel" root={root} onEnter={onEnter} />
+          ) : null}
+        </div>
+      );
+    }
+
+    const view = render(<ExplicitRootHarness />);
+    const root = view.getByTestId('explicit-root');
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+
+    if (!(root instanceof HTMLDivElement) || !(sentinel instanceof HTMLDivElement)) {
+      throw new Error('Explicit root harness not found');
+    }
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+    setScrollAwareRect(sentinel);
+
+    scrollElement(root, 0);
+    scrollElement(root, 120);
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    expect(onEnter.mock.calls[0][0].position).toBe('inside');
+  });
+
   it('uses viewport geometry and rootMargin when no rootRef is provided', () => {
     const onLeave = vi.fn();
     setupViewportHarness({ onLeave, rootMargin: '-100px 0px 0px 0px' });
@@ -417,5 +450,69 @@ describe('AtomTrigger subscription lifecycle', () => {
 
     expect(rootRectCalls).toBe(0);
     expect(onEnter).toHaveBeenCalledTimes(0);
+  });
+
+  it('updates event callbacks after rerender without resubscribing', () => {
+    const firstOnEnter = vi.fn();
+    const secondOnEnter = vi.fn();
+    const firstOnLeave = vi.fn();
+    const secondOnLeave = vi.fn();
+    const firstOnEvent = vi.fn();
+    const secondOnEvent = vi.fn();
+    const rootRef = React.createRef<HTMLDivElement>();
+
+    const view = render(
+      <div ref={rootRef} data-testid="callback-root">
+        <AtomTrigger
+          className="atom-trigger-sentinel"
+          rootRef={rootRef}
+          onEnter={firstOnEnter}
+          onLeave={firstOnLeave}
+          onEvent={firstOnEvent}
+        />
+      </div>,
+    );
+    const root = view.getByTestId('callback-root');
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+
+    if (!(root instanceof HTMLDivElement) || !(sentinel instanceof HTMLDivElement)) {
+      throw new Error('Callback rerender harness not found');
+    }
+
+    let rootRectCalls = 0;
+    setRect(root, () => {
+      rootRectCalls += 1;
+      return new DOMRect(0, 0, 200, 200);
+    });
+    setScrollAwareRect(sentinel);
+
+    scrollElement(root, 120);
+
+    expect(firstOnEnter).toHaveBeenCalledTimes(1);
+    expect(firstOnEvent).toHaveBeenCalledTimes(1);
+
+    rootRectCalls = 0;
+    view.rerender(
+      <div ref={rootRef} data-testid="callback-root">
+        <AtomTrigger
+          className="atom-trigger-sentinel"
+          rootRef={rootRef}
+          onEnter={secondOnEnter}
+          onLeave={secondOnLeave}
+          onEvent={secondOnEvent}
+        />
+      </div>,
+    );
+
+    expect(rootRectCalls).toBe(0);
+
+    scrollElement(root, 280);
+    scrollElement(root, 120);
+
+    expect(firstOnLeave).toHaveBeenCalledTimes(0);
+    expect(firstOnEvent).toHaveBeenCalledTimes(1);
+    expect(secondOnLeave).toHaveBeenCalledTimes(1);
+    expect(secondOnEnter).toHaveBeenCalledTimes(1);
+    expect(secondOnEvent).toHaveBeenCalledTimes(2);
   });
 });

@@ -10,6 +10,7 @@ import {
   setRect,
   setupChildRootHarness,
 } from './AtomTrigger.testUtils';
+import { nonDomChildRefWarning } from './AtomTrigger.warnings';
 
 beforeEach(() => {
   prepareDomTestRun();
@@ -70,6 +71,35 @@ describe('AtomTrigger child mode', () => {
     expect(warn).not.toHaveBeenCalledWith(
       '[react-atom-trigger] Child mode expects a DOM element or a component that forwards its ref to a DOM element. Observation is disabled for this render.',
     );
+  });
+
+  it('warns when a forwarded ref resolves to a non-DOM handle', () => {
+    setNodeEnv('development');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const rootRef = React.createRef<HTMLDivElement>();
+
+    const ImperativeHandleChild = React.forwardRef<{ focus: () => void }>((_props, ref) => {
+      React.useImperativeHandle(
+        ref,
+        () => ({
+          focus() {},
+        }),
+        [],
+      );
+
+      return <div data-testid="imperative-handle-child">child</div>;
+    });
+
+    const view = render(
+      <div ref={rootRef} data-testid="root">
+        <AtomTrigger rootRef={rootRef}>
+          <ImperativeHandleChild />
+        </AtomTrigger>
+      </div>,
+    );
+
+    expect(view.getByTestId('imperative-handle-child')).toBeTruthy();
+    expect(warn).toHaveBeenCalledWith(nonDomChildRefWarning);
   });
 
   it('warns and ignores className in child mode', () => {
