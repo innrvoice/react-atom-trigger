@@ -14,7 +14,6 @@ export default defineConfig({
   hash: false,
   platform: 'browser',
   target: 'es2020',
-  globalName: 'reactAtomTrigger',
   deps: {
     neverBundle: ['react'],
   },
@@ -44,6 +43,7 @@ export default defineConfig({
     if (format === 'umd') {
       return {
         ...options,
+        name: 'reactAtomTrigger',
         globals,
         entryFileNames: '[name].umd.js',
         chunkFileNames: '[name]-chunk.umd.js',
