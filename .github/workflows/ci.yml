@@ -49,6 +49,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          disable_search: true
           files: coverage/unit/lcov.info
           fail_ci_if_error: true
 
