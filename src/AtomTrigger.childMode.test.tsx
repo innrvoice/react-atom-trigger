@@ -185,7 +185,7 @@ describe('AtomTrigger child mode', () => {
     );
   });
 
-  it('falls back to import.meta dev detection for child mode warnings when Node env is unknown', () => {
+  it('keeps child mode warnings silent when development is not explicitly known', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const view = render(
       <AtomTrigger className="atom-trigger-sentinel">
@@ -195,7 +195,7 @@ describe('AtomTrigger child mode', () => {
     const child = view.getByTestId('observed-child');
 
     expect(child.className).toBe('');
-    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledTimes(0);
   });
 
   it('dedupes repeated child mode warnings in development', () => {

@@ -26,15 +26,6 @@ export const invalidRootWarning =
 export const invalidRootRefWarning =
   '[react-atom-trigger] `rootRef.current` must resolve to a real DOM element. Observation is paused until it does.';
 
-type ImportMetaEnvShape = {
-  DEV?: boolean;
-  MODE?: string;
-};
-
-function getImportMetaEnv(): ImportMetaEnvShape | null {
-  return (import.meta as ImportMeta & { env?: ImportMetaEnvShape }).env ?? null;
-}
-
 function getKnownNodeEnv(): 'development' | 'production' | null {
   if (typeof process === 'undefined' || !process.env) {
     return null;
@@ -48,44 +39,16 @@ function getKnownNodeEnv(): 'development' | 'production' | null {
   return null;
 }
 
-function isDevelopmentRuntime(): boolean {
-  return __isDevelopmentRuntimeForTests();
-}
-
 export function __isDevelopmentRuntimeForTests(overrides?: {
   nodeEnv?: 'development' | 'production' | null;
-  importMetaEnv?: ImportMetaEnvShape | null;
 }): boolean {
   const hasNodeEnvOverride = Object.prototype.hasOwnProperty.call(overrides ?? {}, 'nodeEnv');
   const nodeEnv = hasNodeEnvOverride ? (overrides?.nodeEnv ?? null) : getKnownNodeEnv();
-  if (nodeEnv) {
-    return nodeEnv === 'development';
-  }
-
-  const hasImportMetaEnvOverride = Object.prototype.hasOwnProperty.call(
-    overrides ?? {},
-    'importMetaEnv',
-  );
-  const importMetaEnv = hasImportMetaEnvOverride
-    ? (overrides?.importMetaEnv ?? null)
-    : getImportMetaEnv();
-  if (!importMetaEnv) {
-    return false;
-  }
-
-  if (typeof importMetaEnv.DEV === 'boolean') {
-    return importMetaEnv.DEV;
-  }
-
-  if (typeof importMetaEnv.MODE === 'string') {
-    return importMetaEnv.MODE !== 'production';
-  }
-
-  return false;
+  return nodeEnv === 'development';
 }
 
 export function warnOnce(message: string): void {
-  if (!isDevelopmentRuntime()) {
+  if (!__isDevelopmentRuntimeForTests()) {
     return;
   }
 
