@@ -121,11 +121,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Swap React runtime for smoke check
-        run: npm install --no-save --package-lock=false --legacy-peer-deps react@${{ matrix.react }} react-dom@${{ matrix.react-dom }}
-
-      - name: Build package
-        run: pnpm build
-
       - name: Run React compat smoke
-        run: pnpm test:react-compat
+        env:
+          REACT_COMPAT_LABEL: react${{ matrix.react-version }}
+          REACT_COMPAT_REACT: ${{ matrix.react }}
+          REACT_COMPAT_REACT_DOM: ${{ matrix.react-dom }}
+        run: pnpm test:react-compat:matrix

@@ -7,12 +7,36 @@ import { spawnSync } from 'node:child_process';
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(dirname, '..');
 
-const reactMatrix = [
+const defaultReactMatrix = [
   { label: 'react16', react: '16.14.0', reactDom: '16.14.0' },
   { label: 'react17', react: '17.0.2', reactDom: '17.0.2' },
   { label: 'react18', react: '18.3.1', reactDom: '18.3.1' },
   { label: 'react19', react: '19.2.4', reactDom: '19.2.4' },
 ];
+
+function getRequestedReactMatrix() {
+  const react = process.env.REACT_COMPAT_REACT;
+  const reactDom = process.env.REACT_COMPAT_REACT_DOM;
+  const label = process.env.REACT_COMPAT_LABEL;
+
+  if (!react && !reactDom) {
+    return defaultReactMatrix;
+  }
+
+  if (!react || !reactDom) {
+    throw new Error('REACT_COMPAT_REACT and REACT_COMPAT_REACT_DOM must be provided together.');
+  }
+
+  return [
+    {
+      label: label ?? `react-${react}`,
+      react,
+      reactDom,
+    },
+  ];
+}
+
+const reactMatrix = getRequestedReactMatrix();
 
 const smokeSource = `
 import { JSDOM } from 'jsdom';
@@ -270,7 +294,10 @@ function runCommand(command, args, cwd) {
   const result = spawnSync(command, args, {
     cwd,
     stdio: 'inherit',
-    env: process.env,
+    env: {
+      ...process.env,
+      npm_config_cache: npmCacheDir,
+    },
   });
 
   if (result.status !== 0) {
@@ -278,9 +305,10 @@ function runCommand(command, args, cwd) {
   }
 }
 
+const npmCacheDir = await mkdtemp(path.join(os.tmpdir(), 'react-atom-trigger-npm-cache-'));
 runCommand('pnpm', ['build'], repoRoot);
 const packDir = await mkdtemp(path.join(os.tmpdir(), 'react-atom-trigger-pack-'));
-runCommand('npm', ['pack', '--pack-destination', packDir], repoRoot);
+runCommand('npm', ['pack', '--ignore-scripts', '--pack-destination', packDir], repoRoot);
 const [packageTarball] = await readdir(packDir);
 
 if (!packageTarball) {
@@ -321,4 +349,5 @@ try {
   }
 } finally {
   await rm(packDir, { recursive: true, force: true });
+  await rm(npmCacheDir, { recursive: true, force: true });
 }
