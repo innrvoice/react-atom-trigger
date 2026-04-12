@@ -1,3 +1,5 @@
+# Official coverage is uploaded from the unit suite.
+# Browser and Storybook checks run separately as regression gates.
 codecov:
   require_ci_to_pass: true
 

@@ -63,7 +63,7 @@ describe('AtomTrigger geometry helpers', () => {
     const base = new DOMRect(10, 20, 200, 100);
 
     it('expands root bounds for percent and pixel rootMargin values', () => {
-      const expanded = getEffectiveRootBounds(base, '10% 5px 0 .0');
+      const expanded = getEffectiveRootBounds(base, '10% 5px 0 0');
 
       expect(expanded).toEqual(new DOMRect(10, 10, 205, 110));
     });

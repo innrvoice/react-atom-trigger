@@ -1,13 +1,15 @@
 import React from 'react';
-import type { AtomTriggerEvent } from '../../index';
+import type { AtomTriggerEvent, AtomTriggerProps } from '../../index';
 
-export type DemoProps = {
-  once?: boolean;
-  oncePerDirection?: boolean;
-  fireOnInitialVisible?: boolean;
+export type DemoProps = Pick<
+  AtomTriggerProps,
+  'once' | 'oncePerDirection' | 'fireOnInitialVisible' | 'threshold'
+> & {
   rootMargin?: string;
-  threshold?: number;
   initialScrollTop?: number;
+  onEnter?: AtomTriggerProps['onEnter'];
+  onLeave?: AtomTriggerProps['onLeave'];
+  onEvent?: AtomTriggerProps['onEvent'];
 };
 
 export const demoTwoColumnLayoutStyle: React.CSSProperties = {

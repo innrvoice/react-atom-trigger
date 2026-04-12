@@ -1,22 +1,9 @@
-import type {
-  AtomTriggerEntry,
-  AtomTriggerEvent,
-  AtomTriggerProps,
-  TriggerCounts,
-  TriggerType,
-} from './AtomTrigger.types';
-import {
-  getEffectiveRootBounds,
-  getIntersectionRatio,
-  getIntersectionRect,
-  getMovementDirection,
-  getTriggerPosition,
-  normalizeTargetRect,
-} from './AtomTrigger.geometry';
+import type { AtomTriggerEvent, TriggerCounts } from './AtomTrigger.types';
+import { isWindowLike } from './AtomTrigger.runtime';
+import { type SchedulerTarget } from './AtomTrigger.root';
+import { sampleRegistration } from './AtomTrigger.sampling';
 
-export type SchedulerTarget = Window | Element;
-
-type SampleCause = 'geometry-change' | 'root-change' | 'scroll';
+export type SampleCause = 'geometry-change' | 'root-change' | 'scroll';
 
 export type SentinelRegistration = {
   node: Element;
@@ -52,127 +39,7 @@ function createViewportRootBounds(): DOMRectReadOnly {
 }
 
 function isWindowTarget(target: SchedulerTarget): target is Window {
-  return target === window || (typeof Window !== 'undefined' && target instanceof Window);
-}
-
-function shouldFire(
-  type: TriggerType,
-  counts: TriggerCounts,
-  once: boolean,
-  oncePerDirection: boolean,
-): boolean {
-  if (once && counts.entered + counts.left > 0) {
-    return false;
-  }
-
-  if (oncePerDirection) {
-    if (type === 'enter' && counts.entered > 0) {
-      return false;
-    }
-
-    if (type === 'leave' && counts.left > 0) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function isRegistrationComplete(registration: SentinelRegistration): boolean {
-  if (registration.once) {
-    return registration.counts.entered + registration.counts.left > 0;
-  }
-
-  if (registration.oncePerDirection) {
-    return registration.counts.entered > 0 && registration.counts.left > 0;
-  }
-
-  return false;
-}
-
-export function resetObservationState(registration: SentinelRegistration): void {
-  registration.previousTriggerActive = undefined;
-  registration.previousRect = null;
-}
-
-function sampleRegistration(
-  registration: SentinelRegistration,
-  baseRootBounds: DOMRectReadOnly,
-  sampleCause: SampleCause,
-  rootBoundsChanged: boolean,
-): void {
-  const rect = normalizeTargetRect(registration.node.getBoundingClientRect());
-  const effectiveRootBounds = getEffectiveRootBounds(baseRootBounds, registration.rootMargin);
-  const intersectionRect = getIntersectionRect(rect, effectiveRootBounds);
-  const intersectionRatio = getIntersectionRatio(rect, intersectionRect);
-  const isVisible = intersectionRatio > 0;
-  const previousTriggerActive = registration.previousTriggerActive;
-  const nextTriggerActive =
-    previousTriggerActive === true
-      ? isVisible
-      : registration.threshold === 0
-        ? isVisible
-        : intersectionRatio >= registration.threshold;
-  const movementDirection =
-    registration.previousRect && (sampleCause === 'root-change' || rootBoundsChanged)
-      ? 'stationary'
-      : getMovementDirection(registration.previousRect, rect);
-
-  registration.previousRect = rect;
-  registration.previousTriggerActive = nextTriggerActive;
-
-  const timestamp = Date.now();
-  const entry: AtomTriggerEntry = {
-    target: registration.node,
-    rootBounds: effectiveRootBounds,
-    boundingClientRect: rect,
-    intersectionRect,
-    isIntersecting: isVisible,
-    intersectionRatio,
-    source: 'geometry',
-  };
-
-  const isInitial = previousTriggerActive === undefined;
-  if (isInitial && (!registration.fireOnInitialVisible || !nextTriggerActive)) {
-    return;
-  }
-
-  if (previousTriggerActive === nextTriggerActive) {
-    return;
-  }
-
-  const type: TriggerType = nextTriggerActive ? 'enter' : 'leave';
-  if (!shouldFire(type, registration.counts, registration.once, registration.oncePerDirection)) {
-    return;
-  }
-
-  const nextCounts =
-    type === 'enter'
-      ? { ...registration.counts, entered: registration.counts.entered + 1 }
-      : { ...registration.counts, left: registration.counts.left + 1 };
-  registration.counts = nextCounts;
-
-  const payload: AtomTriggerEvent = {
-    type,
-    isInitial,
-    entry,
-    counts: nextCounts,
-    movementDirection,
-    position: getTriggerPosition(entry),
-    timestamp,
-  };
-
-  registration.onEvent?.(payload);
-
-  if (type === 'enter') {
-    registration.onEnter?.(payload);
-  } else {
-    registration.onLeave?.(payload);
-  }
-
-  if (isRegistrationComplete(registration)) {
-    registration.dispose?.();
-  }
+  return target === window || isWindowLike(target);
 }
 
 function createRootScheduler(target: SchedulerTarget): RootScheduler {
@@ -268,9 +135,9 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
       },
       {
         root: isWindowTarget(target) ? null : target,
-        // This observer is only an invalidation signal. Visibility correctness still comes
+        // This observer is only a nearby invalidation signal. Visibility correctness still comes
         // from the custom geometry engine, so we use a broad envelope instead of mirroring
-        // the public rootMargin prop.
+        // the public rootMargin prop exactly.
         rootMargin: '200% 200% 200% 200%',
         threshold: 0,
       },
@@ -312,10 +179,11 @@ export function registerSentinel(
 ): () => void {
   const scheduler = getOrCreateRootScheduler(target);
   let isDisposed = false;
+  const observedNode = registration.node;
 
   scheduler.registrations.add(registration);
-  scheduler.resizeObserver?.observe(registration.node);
-  scheduler.intersectionObserver?.observe(registration.node);
+  scheduler.resizeObserver?.observe(observedNode);
+  scheduler.intersectionObserver?.observe(observedNode);
   scheduler.queueSample();
 
   const dispose = () => {
@@ -325,8 +193,8 @@ export function registerSentinel(
 
     isDisposed = true;
     scheduler.registrations.delete(registration);
-    scheduler.resizeObserver?.unobserve(registration.node);
-    scheduler.intersectionObserver?.unobserve(registration.node);
+    scheduler.resizeObserver?.unobserve(observedNode);
+    scheduler.intersectionObserver?.unobserve(observedNode);
     registration.dispose = undefined;
 
     if (scheduler.registrations.size === 0) {
@@ -338,23 +206,4 @@ export function registerSentinel(
   registration.dispose = dispose;
 
   return dispose;
-}
-
-export function resolveSchedulerTarget(
-  root: AtomTriggerProps['root'],
-  rootRef: AtomTriggerProps['rootRef'],
-): SchedulerTarget | null {
-  if (rootRef) {
-    return rootRef.current;
-  }
-
-  if (root) {
-    return root;
-  }
-
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  return window;
 }

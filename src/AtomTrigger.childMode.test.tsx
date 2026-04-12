@@ -10,7 +10,7 @@ import {
   setRect,
   setupChildRootHarness,
 } from './AtomTrigger.testUtils';
-import { nonDomChildRefWarning } from './AtomTrigger.warnings';
+import { nonDomChildRefWarning, unsupportedChildRefWarning } from './AtomTrigger.warnings';
 
 beforeEach(() => {
   prepareDomTestRun();
@@ -73,16 +73,17 @@ describe('AtomTrigger child mode', () => {
     );
   });
 
-  it('warns when a forwarded ref resolves to a non-DOM handle', () => {
+  it('warns when a forwarded ref resolves to a pseudo-DOM handle instead of crashing', () => {
     setNodeEnv('development');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const rootRef = React.createRef<HTMLDivElement>();
 
-    const ImperativeHandleChild = React.forwardRef<{ focus: () => void }>((_props, ref) => {
+    const ImperativeHandleChild = React.forwardRef<{ nodeType: number }>((_props, ref) => {
       React.useImperativeHandle(
         ref,
         () => ({
-          focus() {},
+          nodeType: 1,
         }),
         [],
       );
@@ -100,6 +101,72 @@ describe('AtomTrigger child mode', () => {
 
     expect(view.getByTestId('imperative-handle-child')).toBeTruthy();
     expect(warn).toHaveBeenCalledWith(nonDomChildRefWarning);
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('does not warn when a child resolves to a DOM node after an async placeholder render', async () => {
+    setNodeEnv('development');
+    vi.useFakeTimers();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const rootRef = React.createRef<HTMLDivElement>();
+
+    const DelayedDomChild = React.forwardRef<HTMLDivElement>((_props, ref) => {
+      const [ready, setReady] = React.useState(false);
+
+      React.useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+          setReady(true);
+        }, 0);
+
+        return () => {
+          window.clearTimeout(timeoutId);
+        };
+      }, []);
+
+      if (!ready) {
+        return null;
+      }
+
+      return (
+        <div data-testid="delayed-dom-child" ref={ref}>
+          child
+        </div>
+      );
+    });
+
+    const view = render(
+      <div ref={rootRef} data-testid="root">
+        <AtomTrigger rootRef={rootRef}>
+          <DelayedDomChild />
+        </AtomTrigger>
+      </div>,
+    );
+
+    const root = view.getByTestId('root');
+    if (!(root instanceof HTMLDivElement)) {
+      throw new Error('Delayed child root not found');
+    }
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+
+    await act(async () => {
+      vi.advanceTimersByTime(0);
+    });
+
+    const child = view.getByTestId('delayed-dom-child');
+    if (!(child instanceof HTMLDivElement)) {
+      throw new Error('Delayed child not found');
+    }
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(16);
+    });
+
+    expect(warn.mock.calls.some(([message]) => message === unsupportedChildRefWarning)).toBe(false);
   });
 
   it('warns and ignores className in child mode', () => {
@@ -118,7 +185,7 @@ describe('AtomTrigger child mode', () => {
     );
   });
 
-  it('keeps child mode warnings silent when development is not explicitly known', () => {
+  it('falls back to import.meta dev detection for child mode warnings when Node env is unknown', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const view = render(
       <AtomTrigger className="atom-trigger-sentinel">
@@ -128,7 +195,7 @@ describe('AtomTrigger child mode', () => {
     const child = view.getByTestId('observed-child');
 
     expect(child.className).toBe('');
-    expect(warn).toHaveBeenCalledTimes(0);
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   it('dedupes repeated child mode warnings in development', () => {
@@ -149,6 +216,62 @@ describe('AtomTrigger child mode', () => {
     );
 
     expect(warn.mock.calls.filter(([warning]) => warning === message)).toHaveLength(1);
+  });
+
+  it('cleans up child observation when a previously observed child stops exposing a DOM node', async () => {
+    const onEnter = vi.fn();
+    const rootRef = React.createRef<HTMLDivElement>();
+    let scrollTop = 0;
+
+    const ObservedChild = React.forwardRef<HTMLDivElement>((_props, ref) => (
+      <div data-testid="switchable-child" ref={ref}>
+        child
+      </div>
+    ));
+
+    function PlainChild() {
+      return <div data-testid="switchable-child">child</div>;
+    }
+
+    const view = render(
+      <div ref={rootRef} data-testid="root">
+        <AtomTrigger rootRef={rootRef} onEnter={onEnter}>
+          <ObservedChild />
+        </AtomTrigger>
+      </div>,
+    );
+
+    const root = view.getByTestId('root');
+    const child = view.getByTestId('switchable-child');
+
+    if (!(root instanceof HTMLDivElement) || !(child instanceof HTMLDivElement)) {
+      throw new Error('Switchable child harness not found');
+    }
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+    setRect(child, () => new DOMRect(0, 260 - scrollTop, 20, 100));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    scrollTop = 135;
+    fireEvent.scroll(root);
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
+
+    view.rerender(
+      <div ref={rootRef} data-testid="root">
+        <AtomTrigger rootRef={rootRef} onEnter={onEnter}>
+          <PlainChild />
+        </AtomTrigger>
+      </div>,
+    );
+
+    scrollTop = 0;
+    fireEvent.scroll(root);
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
   });
 
   it.each([

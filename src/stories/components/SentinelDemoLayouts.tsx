@@ -17,6 +17,9 @@ export function AtomTriggerDemo({
   rootMargin = '0px',
   threshold = 0,
   initialScrollTop = 0,
+  onEnter,
+  onLeave,
+  onEvent,
 }: DemoProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { events, handleEvent } = useDemoEvents();
@@ -29,6 +32,14 @@ export function AtomTriggerDemo({
 
     container.scrollTop = initialScrollTop;
   }, [initialScrollTop]);
+
+  const handleDemoEvent = React.useCallback(
+    (event: Parameters<NonNullable<DemoProps['onEvent']>>[0]) => {
+      handleEvent(event);
+      onEvent?.(event);
+    },
+    [handleEvent, onEvent],
+  );
 
   return (
     <div style={demoTwoColumnLayoutStyle}>
@@ -55,7 +66,9 @@ export function AtomTriggerDemo({
             once={once}
             oncePerDirection={oncePerDirection}
             fireOnInitialVisible={fireOnInitialVisible}
-            onEvent={handleEvent}
+            onEnter={onEnter}
+            onLeave={onLeave}
+            onEvent={handleDemoEvent}
           />
 
           <div style={{ height: 500, paddingTop: 8 }}>
@@ -71,10 +84,31 @@ export function AtomTriggerDemo({
   );
 }
 
-export function FixedHeaderOffsetDemo() {
-  const headerHeight = 100;
+type FixedHeaderDemoProps = Pick<
+  DemoProps,
+  'once' | 'oncePerDirection' | 'threshold' | 'onEnter' | 'onLeave' | 'onEvent'
+> & {
+  headerHeight?: number;
+};
+
+export function FixedHeaderOffsetDemo({
+  headerHeight = 100,
+  once = false,
+  oncePerDirection = false,
+  threshold = 0,
+  onEnter,
+  onLeave,
+  onEvent,
+}: FixedHeaderDemoProps) {
   const viewportRef = React.useRef<HTMLDivElement>(null);
   const { events, handleEvent } = useDemoEvents();
+  const handleFixedHeaderEvent = React.useCallback(
+    (event: Parameters<NonNullable<FixedHeaderDemoProps['onEvent']>>[0]) => {
+      handleEvent(event);
+      onEvent?.(event);
+    },
+    [handleEvent, onEvent],
+  );
 
   return (
     <div
@@ -131,7 +165,12 @@ export function FixedHeaderOffsetDemo() {
             className="atom-trigger-sentinel"
             rootRef={viewportRef}
             rootMargin={`-${headerHeight}px 0px 0px 0px`}
-            onEvent={handleEvent}
+            threshold={threshold}
+            once={once}
+            oncePerDirection={oncePerDirection}
+            onEnter={onEnter}
+            onLeave={onLeave}
+            onEvent={handleFixedHeaderEvent}
           />
 
           <div style={{ height: 1200, paddingTop: 8 }}>
@@ -149,9 +188,23 @@ export function FixedHeaderOffsetDemo() {
   );
 }
 
-export function FixedHeaderOffsetViewportDemo() {
-  const headerHeight = 100;
+export function FixedHeaderOffsetViewportDemo({
+  headerHeight = 100,
+  once = false,
+  oncePerDirection = false,
+  threshold = 0,
+  onEnter,
+  onLeave,
+  onEvent,
+}: FixedHeaderDemoProps) {
   const { events, handleEvent } = useDemoEvents();
+  const handleViewportEvent = React.useCallback(
+    (event: Parameters<NonNullable<FixedHeaderDemoProps['onEvent']>>[0]) => {
+      handleEvent(event);
+      onEvent?.(event);
+    },
+    [handleEvent, onEvent],
+  );
 
   return (
     <div style={{ display: 'flex', width: '100%', padding: 20, fontFamily: 'sans-serif' }}>
@@ -191,7 +244,12 @@ export function FixedHeaderOffsetViewportDemo() {
           <AtomTrigger
             className="atom-trigger-sentinel"
             rootMargin={`-${headerHeight}px 0px 0px 0px`}
-            onEvent={handleEvent}
+            threshold={threshold}
+            once={once}
+            oncePerDirection={oncePerDirection}
+            onEnter={onEnter}
+            onLeave={onLeave}
+            onEvent={handleViewportEvent}
           />
 
           <div style={{ height: 1600, paddingTop: 8 }}>
@@ -209,9 +267,29 @@ export function FixedHeaderOffsetViewportDemo() {
   );
 }
 
-export function HorizontalScrollDemo() {
+type HorizontalScrollDemoProps = Pick<
+  DemoProps,
+  'once' | 'oncePerDirection' | 'threshold' | 'rootMargin' | 'onEnter' | 'onLeave' | 'onEvent'
+>;
+
+export function HorizontalScrollDemo({
+  once = false,
+  oncePerDirection = false,
+  threshold = 0,
+  rootMargin = '0px',
+  onEnter,
+  onLeave,
+  onEvent,
+}: HorizontalScrollDemoProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { events, handleEvent } = useDemoEvents();
+  const handleHorizontalEvent = React.useCallback(
+    (event: Parameters<NonNullable<HorizontalScrollDemoProps['onEvent']>>[0]) => {
+      handleEvent(event);
+      onEvent?.(event);
+    },
+    [handleEvent, onEvent],
+  );
 
   return (
     <div
@@ -257,8 +335,13 @@ export function HorizontalScrollDemo() {
             <AtomTrigger
               className="atom-trigger-sentinel--vertical"
               rootRef={containerRef}
-              threshold={0}
-              onEvent={handleEvent}
+              rootMargin={rootMargin}
+              threshold={threshold}
+              once={once}
+              oncePerDirection={oncePerDirection}
+              onEnter={onEnter}
+              onLeave={onLeave}
+              onEvent={handleHorizontalEvent}
             />
 
             <div

@@ -38,7 +38,7 @@ jobs:
       - name: Run unit coverage
         run: pnpm test:coverage:unit
 
-      - name: Upload coverage to Codecov
+      - name: Upload unit coverage to Codecov
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: codecov/codecov-action@v5
         with:
@@ -51,6 +51,9 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm build
+
+      - name: Package smoke
+        run: pnpm test:package-smoke
 
   storybook-browser:
     name: Storybook Browser Checks
@@ -76,7 +79,51 @@ jobs:
       - name: Install Playwright browser (Chromium)
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run Storybook regression checks
+      - name: Run Storybook browser regression checks
         env:
           CI: true
         run: pnpm test:storybook
+
+  react-compat-smoke:
+    name: React Compat Smoke (${{ matrix.react-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - react-version: 16
+            react: 16.14.0
+            react-dom: 16.14.0
+          - react-version: 17
+            react: 17.0.2
+            react-dom: 17.0.2
+          - react-version: 18
+            react: 18.3.1
+            react-dom: 18.3.1
+          - react-version: 19
+            react: 19.2.4
+            react-dom: 19.2.4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run React compat smoke
+        env:
+          REACT_COMPAT_LABEL: react${{ matrix.react-version }}
+          REACT_COMPAT_REACT: ${{ matrix.react }}
+          REACT_COMPAT_REACT_DOM: ${{ matrix.react-dom }}
+        run: pnpm test:react-compat:matrix

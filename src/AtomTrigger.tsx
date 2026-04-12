@@ -1,19 +1,27 @@
 import React from 'react';
 import type { AtomTriggerProps } from './AtomTrigger.types';
-import { assignRef, getInvalidChildWarning } from './AtomTrigger.childMode';
+import {
+  getElementRef,
+  getInvalidChildWarning,
+  useObservedChildNode,
+  type ChildElementWithOptionalRef,
+} from './AtomTrigger.childMode';
 import { normalizeRootMargin, normalizeThreshold } from './AtomTrigger.geometry';
 import {
-  type SchedulerTarget,
-  type SentinelRegistration,
-  registerSentinel,
-  resetObservationState,
+  createObservationController,
+  disposeObservationController,
+  reconcileObservationBinding,
+  updateObservationCallbacks,
+  type ObservationController,
+} from './AtomTrigger.observation';
+import {
   resolveSchedulerTarget,
-} from './AtomTrigger.scheduler';
+  useTrackedRootRefTarget,
+  type SchedulerTargetSource,
+} from './AtomTrigger.root';
 import {
   childModeClassNameWarning,
-  nonDomChildRefWarning,
-  unsupportedChildRefWarning,
-  upgradeBehaviorWarning,
+  conflictingOnceModesWarning,
   warnOnce,
 } from './AtomTrigger.warnings';
 
@@ -29,25 +37,14 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
   fireOnInitialVisible = false,
   disabled = false,
   threshold = 0,
-  root = null,
+  root,
   rootRef,
   rootMargin = '0px',
   className,
 }) => {
   const sentinelRef = React.useRef<HTMLDivElement>(null);
-  const [childNode, setChildNode] = React.useState<Element | null>(null);
-  const childNodeRef = React.useRef<Element | null>(null);
-  const registrationRef = React.useRef<SentinelRegistration | null>(null);
-  const disposeRef = React.useRef<(() => void) | null>(null);
-  const bindingRef = React.useRef<{
-    node: Element;
-    target: SchedulerTarget;
-    rootMargin: string;
-    threshold: number;
-    once: boolean;
-    oncePerDirection: boolean;
-    fireOnInitialVisible: boolean;
-  } | null>(null);
+  const controllerRef = React.useRef<ObservationController | null>(null);
+  const trackedRootRefTarget = useTrackedRootRefTarget(rootRef);
 
   const normalizedRootMargin = normalizeRootMargin(rootMargin);
   const normalizedThreshold = normalizeThreshold(threshold);
@@ -55,47 +52,24 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
   const hasObservedChild = children !== null && children !== undefined;
   const childCount = React.Children.count(children);
   const singleChildElement = childCount === 1 && React.isValidElement(children) ? children : null;
-  const childType = singleChildElement ? singleChildElement.type : null;
 
   const invalidChildWarning = getInvalidChildWarning(
     hasObservedChild,
     childCount,
     singleChildElement,
-    childType,
   );
 
   const childElementWithRef =
     invalidChildWarning || !singleChildElement
       ? null
-      : (singleChildElement as React.ReactElement<{ ref?: React.Ref<unknown> }>);
-  const originalChildRef = childElementWithRef?.props.ref;
-
-  const attachObservedChildRef = React.useCallback(
-    (value: unknown) => {
-      assignRef(originalChildRef, value);
-
-      if (value === null) {
-        childNodeRef.current = null;
-        setChildNode(currentNode => (currentNode === null ? currentNode : null));
-        return;
-      }
-
-      if (value instanceof Element) {
-        childNodeRef.current = value;
-        setChildNode(currentNode => (currentNode === value ? currentNode : value));
-        return;
-      }
-
-      childNodeRef.current = null;
-      setChildNode(currentNode => (currentNode === null ? currentNode : null));
-      warnOnce(nonDomChildRefWarning);
-    },
-    [originalChildRef],
-  );
-
-  React.useEffect(() => {
-    warnOnce(upgradeBehaviorWarning);
-  }, []);
+      : (singleChildElement as ChildElementWithOptionalRef);
+  const originalChildRef = getElementRef(childElementWithRef);
+  const { childNode, attachObservedChildRef } = useObservedChildNode({
+    originalChildRef,
+    hasObservedChild,
+    invalidChildWarning,
+    shouldWarnAboutMissingDomRef: childElementWithRef !== null,
+  });
 
   React.useEffect(() => {
     if (hasObservedChild && className) {
@@ -110,36 +84,18 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
   }, [invalidChildWarning]);
 
   React.useEffect(() => {
-    if (
-      typeof window === 'undefined' ||
-      !hasObservedChild ||
-      !childElementWithRef ||
-      invalidChildWarning ||
-      childNode
-    ) {
-      return;
+    if (once && oncePerDirection) {
+      warnOnce(conflictingOnceModesWarning);
     }
-
-    const timeoutId = window.setTimeout(() => {
-      if (!childNodeRef.current) {
-        warnOnce(unsupportedChildRefWarning);
-      }
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [childNode, childElementWithRef, hasObservedChild, invalidChildWarning]);
+  }, [once, oncePerDirection]);
 
   React.useEffect(() => {
-    const registration = registrationRef.current;
-    if (!registration) {
+    const controller = controllerRef.current;
+    if (!controller) {
       return;
     }
 
-    registration.onEnter = onEnter;
-    registration.onLeave = onLeave;
-    registration.onEvent = onEvent;
+    updateObservationCallbacks(controller, { onEnter, onLeave, onEvent });
   }, [onEnter, onLeave, onEvent]);
 
   React.useEffect(() => {
@@ -148,57 +104,46 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
     }
 
     const node = hasObservedChild ? childNode : sentinelRef.current;
-    const resolvedRoot = resolveSchedulerTarget(root, rootRef);
+    const targetSource: SchedulerTargetSource =
+      rootRef !== undefined
+        ? { kind: 'rootRef', target: trackedRootRefTarget }
+        : root !== undefined
+          ? { kind: 'root', target: root }
+          : { kind: 'viewport' };
+    const resolvedRoot = resolveSchedulerTarget(targetSource);
 
     if (!node) {
-      if (registrationRef.current) {
-        resetObservationState(registrationRef.current);
+      if (controllerRef.current) {
+        reconcileObservationBinding(controllerRef.current, {
+          disabled: false,
+          node: null,
+          target: resolvedRoot,
+          rootMargin: normalizedRootMargin,
+          threshold: normalizedThreshold,
+          once,
+          oncePerDirection,
+          fireOnInitialVisible,
+        });
       }
-      disposeRef.current?.();
-      disposeRef.current = null;
-      bindingRef.current = null;
       return;
     }
 
-    if (!registrationRef.current) {
-      registrationRef.current = {
-        node,
-        rootMargin: normalizedRootMargin,
-        threshold: normalizedThreshold,
-        once,
-        oncePerDirection,
-        fireOnInitialVisible,
-        onEnter,
-        onLeave,
-        onEvent,
-        previousTriggerActive: undefined,
-        previousRect: null,
-        counts: {
-          entered: 0,
-          left: 0,
+    if (!controllerRef.current) {
+      controllerRef.current = createObservationController(
+        {
+          node,
+          rootMargin: normalizedRootMargin,
+          threshold: normalizedThreshold,
+          once,
+          oncePerDirection,
+          fireOnInitialVisible,
         },
-      } satisfies SentinelRegistration;
-    } else {
-      registrationRef.current.node = node;
-      registrationRef.current.rootMargin = normalizedRootMargin;
-      registrationRef.current.threshold = normalizedThreshold;
-      registrationRef.current.once = once;
-      registrationRef.current.oncePerDirection = oncePerDirection;
-      registrationRef.current.fireOnInitialVisible = fireOnInitialVisible;
+        { onEnter, onLeave, onEvent },
+      );
     }
 
-    const registration = registrationRef.current;
-
-    if (disabled || !resolvedRoot) {
-      resetObservationState(registration);
-      disposeRef.current?.();
-      disposeRef.current = null;
-      bindingRef.current = null;
-      return;
-    }
-
-    const previousBinding = bindingRef.current;
-    const nextBinding = {
+    reconcileObservationBinding(controllerRef.current, {
+      disabled,
       node,
       target: resolvedRoot,
       rootMargin: normalizedRootMargin,
@@ -206,24 +151,7 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
       once,
       oncePerDirection,
       fireOnInitialVisible,
-    };
-
-    const shouldResubscribe =
-      !previousBinding ||
-      previousBinding.node !== nextBinding.node ||
-      previousBinding.target !== nextBinding.target ||
-      previousBinding.rootMargin !== nextBinding.rootMargin ||
-      previousBinding.threshold !== nextBinding.threshold ||
-      previousBinding.once !== nextBinding.once ||
-      previousBinding.oncePerDirection !== nextBinding.oncePerDirection ||
-      previousBinding.fireOnInitialVisible !== nextBinding.fireOnInitialVisible;
-
-    if (shouldResubscribe) {
-      resetObservationState(registration);
-      disposeRef.current?.();
-      disposeRef.current = registerSentinel(resolvedRoot, registration);
-      bindingRef.current = nextBinding;
-    }
+    });
   }, [
     disabled,
     normalizedRootMargin,
@@ -233,15 +161,19 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
     fireOnInitialVisible,
     childNode,
     root,
-    rootRef?.current,
+    rootRef,
+    trackedRootRefTarget,
     hasObservedChild,
   ]);
 
   React.useEffect(
     () => () => {
-      disposeRef.current?.();
-      disposeRef.current = null;
-      bindingRef.current = null;
+      if (!controllerRef.current) {
+        return;
+      }
+
+      disposeObservationController(controllerRef.current);
+      controllerRef.current = null;
     },
     [],
   );

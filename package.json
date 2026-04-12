@@ -1,6 +1,6 @@
 {
   "name": "react-atom-trigger",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Geometry-based scroll trigger for React with precise enter/leave control. A modern alternative to react-waypoint.",
   "keywords": [
     "intersection",
@@ -52,9 +52,12 @@
     "precommit:checks": "pnpm format:check && pnpm lint && pnpm test",
     "test": "pnpm test:all",
     "test:all": "pnpm test:unit && pnpm test:storybook",
-    "test:coverage": "pnpm test:coverage:unit && pnpm test:coverage:storybook",
+    "test:coverage": "pnpm test:coverage:unit",
     "test:coverage:unit": "vitest run --project=unit --reporter=verbose --coverage.enabled=true --coverage.reportsDirectory=coverage/unit",
     "test:coverage:storybook": "vitest run --project=storybook --coverage.enabled=true --coverage.reportsDirectory=coverage/storybook",
+    "test:package-smoke": "node scripts/package-smoke.mjs",
+    "test:react-compat": "node scripts/react-compat-smoke.mjs",
+    "test:react-compat:matrix": "node scripts/react-compat-matrix.mjs",
     "test:unit": "vitest run --project=unit --reporter=verbose",
     "test:watch": "vitest --project=unit",
     "test:storybook": "vitest run --project=storybook",
@@ -88,9 +91,6 @@
   },
   "peerDependencies": {
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
-  },
-  "engines": {
-    "node": ">=20.19.0"
   },
   "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
   "pnpm": {

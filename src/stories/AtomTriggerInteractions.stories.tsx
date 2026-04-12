@@ -1,21 +1,37 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
-import { AtomTrigger } from '../index';
 import {
   DeterministicInteractionHarness,
   FixedHeaderViewportHarness,
   MultiSentinelInteractionHarness,
+  type InteractionHarnessProps,
 } from './components/DeterministicInteractionHarness';
 import { StorySentinelStyles } from './components/StoryStyles';
+import { atomTriggerActionArgs, atomTriggerArgTypes } from './storybookArgs';
 
-const meta: Meta<typeof AtomTrigger> = {
+type SentinelInteractionStoryArgs = InteractionHarnessProps & {
+  threshold?: number;
+};
+
+const meta: Meta<SentinelInteractionStoryArgs> = {
   title: 'Internal Tests/AtomTrigger Interactions/Sentinel Mode',
-  component: AtomTrigger,
   tags: ['!autodocs'],
   parameters: {
     layout: 'padded',
+    controls: {
+      expanded: true,
+    },
   },
+  args: {
+    ...atomTriggerActionArgs,
+    once: false,
+    oncePerDirection: false,
+    fireOnInitialVisible: false,
+    initialVerticalScrollTop: 0,
+    threshold: 0,
+  },
+  argTypes: atomTriggerArgTypes,
   decorators: [
     Story => (
       <>
@@ -31,7 +47,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const InteractionOnceOnly: Story = {
-  render: () => <DeterministicInteractionHarness once />,
+  args: {
+    once: true,
+  },
+  render: args => <DeterministicInteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const triggerEnter = canvas.getByRole('button', { name: /trigger enter/i });
     const triggerLeave = canvas.getByRole('button', { name: /trigger leave/i });
@@ -77,7 +96,10 @@ export const InteractionOnceOnly: Story = {
 };
 
 export const InteractionOncePerDirection: Story = {
-  render: () => <DeterministicInteractionHarness oncePerDirection />,
+  args: {
+    oncePerDirection: true,
+  },
+  render: args => <DeterministicInteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const triggerEnter = canvas.getByRole('button', { name: /trigger enter/i });
     const triggerLeave = canvas.getByRole('button', { name: /trigger leave/i });
@@ -121,9 +143,11 @@ export const InteractionOncePerDirection: Story = {
 };
 
 export const InitialVisibleOnLoad: Story = {
-  render: () => (
-    <DeterministicInteractionHarness fireOnInitialVisible initialVerticalScrollTop={120} />
-  ),
+  args: {
+    fireOnInitialVisible: true,
+    initialVerticalScrollTop: 120,
+  },
+  render: args => <DeterministicInteractionHarness {...args} />,
   play: async ({ canvas, step }) => {
     const observerReady = canvas.getByTestId('deterministic-observer-ready');
     const enteredCount = canvas.getByTestId('deterministic-entered');
@@ -146,7 +170,7 @@ export const InitialVisibleOnLoad: Story = {
 };
 
 export const VerticalScrollBehavior: Story = {
-  render: () => <DeterministicInteractionHarness />,
+  render: args => <DeterministicInteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const runVertical = canvas.getByRole('button', { name: /run vertical sequence/i });
     const observerReady = canvas.getByTestId('deterministic-observer-ready');
@@ -176,7 +200,7 @@ export const VerticalScrollBehavior: Story = {
 };
 
 export const HorizontalScrollBehavior: Story = {
-  render: () => <DeterministicInteractionHarness />,
+  render: args => <DeterministicInteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const runHorizontal = canvas.getByRole('button', { name: /run horizontal sequence/i });
     const observerReady = canvas.getByTestId('deterministic-observer-ready');
@@ -206,7 +230,7 @@ export const HorizontalScrollBehavior: Story = {
 };
 
 export const MultiSentinelSharedRoots: Story = {
-  render: () => <MultiSentinelInteractionHarness />,
+  render: args => <MultiSentinelInteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const runVertical = canvas.getByRole('button', { name: /run shared vertical scroll/i });
     const runHorizontal = canvas.getByRole('button', { name: /run shared horizontal scroll/i });
@@ -259,7 +283,7 @@ export const MultiSentinelSharedRoots: Story = {
 };
 
 export const FixedHeaderViewportRootMargin: Story = {
-  render: () => <FixedHeaderViewportHarness />,
+  render: args => <FixedHeaderViewportHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const triggerEnter = canvas.getByRole('button', { name: /trigger margin enter/i });
     const beforeBoundary = canvas.getByRole('button', { name: /scroll before header boundary/i });

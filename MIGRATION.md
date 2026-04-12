@@ -4,6 +4,8 @@
 
 The biggest change is simple: `AtomTrigger` does its own observation now. In `v1.x` you had to pass scroll state and dimensions in from the outside. In `v2.x` you pass callbacks and, when needed, a root element.
 
+The supported React range for `v2` remains the published peer range: React `16.8` through `19.x`.
+
 ## Before you start
 
 This is not just a prop rename release.

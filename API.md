@@ -7,6 +7,8 @@ But if something feels unclear or behaves a bit differently than you expected, t
 
 The goal here is not only to explain what it does, but also why it behaves like that, because this is usually where confusion starts.
 
+`v2` treats the published peer range as the compatibility contract: React `16.8` through `19.x`.
+
 ## What `<AtomTrigger />` Actually Does
 
 At the simplest level, it solves this:
@@ -36,6 +38,7 @@ This works fine in most cases, but it is a bit abstract because you do not reall
 Important detail:
 
 - In this mode the sentinel is basically point-like.
+- The internal sentinel intentionally uses a non-block display so it behaves like a marker, not a full-width block placeholder.
 - So things like `threshold` do not behave very meaningfully unless you explicitly give it size.
 - The library normalizes zero-size geometry to at least `1px x 1px`, but in practice it still behaves almost like a point.
 
@@ -162,6 +165,9 @@ function Example() {
   );
 }
 ```
+
+If a custom child temporarily renders `null` or a placeholder before the DOM node exists,
+`AtomTrigger` delays the missing-ref warning a bit so that normal async mount flows can settle first.
 
 ## Props
 
@@ -362,6 +368,9 @@ function Example({ containerElement }: { containerElement: HTMLDivElement | null
 }
 ```
 
+If you pass `root` explicitly but it is currently `null`, observation pauses until that real root
+exists. It does not silently switch back to the viewport.
+
 ### `rootRef`
 
 Same as `root`, but React-friendly.
@@ -392,11 +401,15 @@ export function ScrollBox() {
 }
 ```
 
+If `rootRef.current` is still `null`, observation pauses until the ref resolves to a real DOM
+element.
+
 Rule of thumb:
 
 - no `root`: viewport
 - `rootRef`: JSX container
 - `root`: external DOM node
+- unresolved explicit `root` / `rootRef`: paused observation, not viewport fallback
 
 ### `rootMargin`
 
@@ -428,7 +441,7 @@ Practical advice:
 Important implementation detail:
 
 - `rootMargin` is handled by the library itself
-- `IntersectionObserver` is only used to wake things up when layout changes
+- `IntersectionObserver` is only used to wake things up when nearby layout changes happen
 
 That is why behavior is consistent and not dependent on browser quirks.
 

@@ -23,6 +23,8 @@ export default defineConfig({
         'src/**/*.test.{ts,tsx}',
         'src/**/*.module.css',
         'src/**/*.testUtils.{ts,tsx}',
+        'src/AtomTrigger.testUtils.tsx',
+        'src/testUtils/**',
         'src/index.ts',
         'src/stories/**',
         'src/types/**',

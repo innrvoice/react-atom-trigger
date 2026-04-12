@@ -1,4 +1,5 @@
 import React from 'react';
+import type { AtomTriggerProps } from '../../index';
 import { AtomTrigger } from '../../index';
 import { EventLogPanel } from './EventLogPanel';
 import {
@@ -10,7 +11,10 @@ import {
 export type ChildModeDemoProps = {
   rootMargin?: string;
   threshold?: number;
-};
+} & Pick<
+  AtomTriggerProps,
+  'once' | 'oncePerDirection' | 'fireOnInitialVisible' | 'onEnter' | 'onLeave' | 'onEvent'
+>;
 
 const childCardStyle: React.CSSProperties = {
   border: '1px solid #8b5cf6',
@@ -36,9 +40,25 @@ function ChildThresholdMeter({ threshold }: { threshold: number }) {
   );
 }
 
-export function ChildModeDemo({ rootMargin = '0px', threshold = 0 }: ChildModeDemoProps) {
+export function ChildModeDemo({
+  rootMargin = '0px',
+  threshold = 0,
+  once = false,
+  oncePerDirection = false,
+  fireOnInitialVisible = false,
+  onEnter,
+  onLeave,
+  onEvent,
+}: ChildModeDemoProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { events, handleEvent } = useDemoEvents();
+  const handleChildEvent = React.useCallback(
+    (event: Parameters<NonNullable<ChildModeDemoProps['onEvent']>>[0]) => {
+      handleEvent(event);
+      onEvent?.(event);
+    },
+    [handleEvent, onEvent],
+  );
 
   return (
     <div style={demoTwoColumnLayoutStyle}>
@@ -60,7 +80,12 @@ export function ChildModeDemo({ rootMargin = '0px', threshold = 0 }: ChildModeDe
             rootRef={containerRef}
             rootMargin={rootMargin}
             threshold={threshold}
-            onEvent={handleEvent}
+            once={once}
+            oncePerDirection={oncePerDirection}
+            fireOnInitialVisible={fireOnInitialVisible}
+            onEnter={onEnter}
+            onLeave={onLeave}
+            onEvent={handleChildEvent}
           >
             <article style={childCardStyle}>
               <p
