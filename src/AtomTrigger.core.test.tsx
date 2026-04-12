@@ -1,5 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AtomTrigger } from './index';
 import {
@@ -24,7 +25,7 @@ afterEach(() => {
 });
 
 describe('AtomTrigger rendering', () => {
-  it('renders the sentinel with the legacy non-block default display', () => {
+  it('renders the sentinel as a non-block point marker instead of a full-width placeholder', () => {
     const view = render(<AtomTrigger />);
     const sentinel = view.container.firstElementChild;
 
@@ -33,6 +34,8 @@ describe('AtomTrigger rendering', () => {
     }
 
     expect(sentinel.style.display).toBe('table');
+    expect(sentinel.style.width).toBe('');
+    expect(sentinel.style.height).toBe('');
   });
 
   it('observes a single child element without adding a wrapper', () => {
@@ -47,26 +50,36 @@ describe('AtomTrigger rendering', () => {
     expect(view.container.firstElementChild).toBe(child);
   });
 
-  it('shows the v2 upgrade warning only once in development and never in production or unknown envs', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('renders safely during SSR without touching window-only observation logic', () => {
+    vi.stubGlobal('window', undefined);
 
-    setNodeEnv('production');
-    render(<AtomTrigger />);
-    expect(warn).toHaveBeenCalledTimes(0);
-
-    setNodeEnv(undefined);
-    render(<AtomTrigger />);
-    expect(warn).toHaveBeenCalledTimes(0);
-
-    setNodeEnv('development');
-    render(<AtomTrigger />);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenLastCalledWith(
-      '[react-atom-trigger] v2 uses a new internal observation engine. If you upgraded from v1.x, verify trigger behavior for timing, threshold and rootMargin.',
+    expect(() => renderToStaticMarkup(<AtomTrigger className="server-sentinel" />)).not.toThrow();
+    expect(renderToStaticMarkup(<AtomTrigger className="server-sentinel" />)).toContain(
+      'class="server-sentinel"',
     );
 
-    render(<AtomTrigger />);
-    expect(warn).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
+  it('warns once when once and oncePerDirection are combined', () => {
+    setNodeEnv('development');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    render(<AtomTrigger once oncePerDirection />);
+
+    expect(warn).toHaveBeenCalledWith(
+      '[react-atom-trigger] `once` and `oncePerDirection` were both provided. `once` takes precedence.',
+    );
+
+    render(<AtomTrigger once oncePerDirection />);
+
+    expect(
+      warn.mock.calls.filter(
+        ([message]) =>
+          message ===
+          '[react-atom-trigger] `once` and `oncePerDirection` were both provided. `once` takes precedence.',
+      ),
+    ).toHaveLength(1);
   });
 });
 
@@ -143,6 +156,41 @@ describe('AtomTrigger transitions', () => {
 
     expect(onEnter).toHaveBeenCalledTimes(1);
     expect(onLeave).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps subscriptions idempotent through StrictMode double mount cycles', () => {
+    const onEnter = vi.fn();
+    const rootRef = React.createRef<HTMLDivElement>();
+    const view = render(
+      <React.StrictMode>
+        <div ref={rootRef} data-testid="strict-root">
+          <AtomTrigger className="atom-trigger-sentinel" rootRef={rootRef} onEnter={onEnter} />
+        </div>
+      </React.StrictMode>,
+    );
+    const root = view.getByTestId('strict-root');
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+
+    if (!(root instanceof HTMLDivElement) || !(sentinel instanceof HTMLDivElement)) {
+      throw new Error('Strict mode harness not found');
+    }
+
+    let rootRectCalls = 0;
+    setRect(root, () => {
+      rootRectCalls += 1;
+      return new DOMRect(0, 0, 200, 200);
+    });
+    setScrollAwareRect(sentinel);
+
+    scrollElement(root, 120);
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
+
+    view.unmount();
+    rootRectCalls = 0;
+    scrollElement(root, 280);
+
+    expect(rootRectCalls).toBe(0);
   });
 });
 

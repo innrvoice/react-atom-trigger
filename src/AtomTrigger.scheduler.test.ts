@@ -1,13 +1,10 @@
 import { fireEvent } from '@testing-library/react';
-import type React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  registerSentinel,
-  resetObservationState,
-  resolveSchedulerTarget,
-  type SentinelRegistration,
-} from './AtomTrigger.scheduler';
-import { finishDomTestRun, prepareDomTestRun, setRect } from './AtomTrigger.testUtils';
+import { registerSentinel, type SentinelRegistration } from './AtomTrigger.scheduler';
+import { resolveSchedulerTarget } from './AtomTrigger.root';
+import { resetObservationState } from './AtomTrigger.sampling';
+import { finishDomTestRun, prepareDomTestRun, setNodeEnv, setRect } from './AtomTrigger.testUtils';
+import { invalidRootRefWarning, invalidRootWarning } from './AtomTrigger.warnings';
 
 function createRegistration(
   node: Element,
@@ -112,17 +109,32 @@ describe('AtomTrigger scheduler helpers', () => {
   it('resolves rootRef before root and falls back to the viewport', () => {
     const root = document.createElement('div');
     const rootFromRef = document.createElement('div');
-    const rootRef = { current: rootFromRef } as React.RefObject<HTMLDivElement>;
 
-    expect(resolveSchedulerTarget(root, rootRef)).toBe(rootFromRef);
-    expect(resolveSchedulerTarget(root, undefined)).toBe(root);
-    expect(resolveSchedulerTarget(null, undefined)).toBe(window);
+    expect(resolveSchedulerTarget({ kind: 'rootRef', target: rootFromRef })).toBe(rootFromRef);
+    expect(resolveSchedulerTarget({ kind: 'root', target: root })).toBe(root);
+    expect(resolveSchedulerTarget({ kind: 'viewport' })).toBe(window);
+  });
+
+  it('pauses observation when an explicit root prop is unresolved', () => {
+    expect(resolveSchedulerTarget({ kind: 'root', target: null })).toBeNull();
+    expect(resolveSchedulerTarget({ kind: 'rootRef', target: null })).toBeNull();
+  });
+
+  it('warns and pauses observation when explicit roots are not real DOM elements', () => {
+    setNodeEnv('development');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const pseudoRoot = { nodeType: 1 } as unknown as HTMLDivElement;
+
+    expect(resolveSchedulerTarget({ kind: 'root', target: pseudoRoot })).toBeNull();
+    expect(resolveSchedulerTarget({ kind: 'rootRef', target: pseudoRoot })).toBeNull();
+    expect(warn).toHaveBeenCalledWith(invalidRootWarning);
+    expect(warn).toHaveBeenCalledWith(invalidRootRefWarning);
   });
 
   it('returns null when the runtime has no viewport target', () => {
     vi.stubGlobal('window', undefined);
 
-    expect(resolveSchedulerTarget(null, undefined)).toBeNull();
+    expect(resolveSchedulerTarget({ kind: 'viewport' })).toBeNull();
 
     vi.unstubAllGlobals();
   });
@@ -172,6 +184,99 @@ describe('AtomTrigger scheduler helpers', () => {
     expect(registration.dispose).toBeUndefined();
   });
 
+  it('uses viewport observers without trying to observe the window target directly', () => {
+    const { resizeObservers, intersectionObservers } = installObserverMocks();
+    const node = document.createElement('div');
+
+    setRect(node, () => new DOMRect(0, 100, 10, 10));
+
+    const dispose = registerSentinel(window, createRegistration(node));
+
+    expect(resizeObservers).toHaveLength(1);
+    expect(resizeObservers[0].observe).toHaveBeenCalledTimes(1);
+    expect(resizeObservers[0].observe).toHaveBeenCalledWith(node);
+    expect(resizeObservers[0].observe).not.toHaveBeenCalledWith(window);
+
+    expect(intersectionObservers).toHaveLength(1);
+    expect(intersectionObservers[0].options.root).toBeNull();
+
+    dispose();
+  });
+
+  it('unobserves the original node when a registration mutates before dispose', () => {
+    const { resizeObservers, intersectionObservers } = installObserverMocks();
+    const root = document.createElement('div');
+    const firstNode = document.createElement('div');
+    const nextNode = document.createElement('div');
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+    setRect(firstNode, () => new DOMRect(0, 260, 10, 10));
+    setRect(nextNode, () => new DOMRect(0, 120, 10, 10));
+
+    const registration = createRegistration(firstNode);
+    const dispose = registerSentinel(root, registration);
+
+    registration.node = nextNode;
+    dispose();
+
+    expect(resizeObservers[0].observe.mock.calls[1]?.[0]).toBe(firstNode);
+    expect(resizeObservers[0].unobserve.mock.calls[0]?.[0]).toBe(firstNode);
+    expect(intersectionObservers[0].observe.mock.calls[0]?.[0]).toBe(firstNode);
+    expect(intersectionObservers[0].unobserve.mock.calls[0]?.[0]).toBe(firstNode);
+  });
+
+  it('keeps scroll-driven observation working without ResizeObserver', () => {
+    vi.stubGlobal('ResizeObserver', undefined);
+
+    const root = document.createElement('div');
+    const node = document.createElement('div');
+    const onEnter = vi.fn();
+    let top = 260;
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+    setRect(node, () => new DOMRect(0, top, 10, 10));
+
+    const dispose = registerSentinel(
+      root,
+      createRegistration(node, {
+        onEnter,
+      }),
+    );
+
+    top = 120;
+    fireEvent.scroll(root);
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
+
+    dispose();
+  });
+
+  it('keeps scroll-driven observation working without IntersectionObserver', () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
+
+    const root = document.createElement('div');
+    const node = document.createElement('div');
+    const onEnter = vi.fn();
+    let top = 260;
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+    setRect(node, () => new DOMRect(0, top, 10, 10));
+
+    const dispose = registerSentinel(
+      root,
+      createRegistration(node, {
+        onEnter,
+      }),
+    );
+
+    top = 120;
+    fireEvent.scroll(root);
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
+
+    dispose();
+  });
+
   it('coalesces repeated invalidation signals into a single animation frame', () => {
     const { requestAnimationFrameSpy, runAllFrames } = installQueuedAnimationFrames();
     const onEnter = vi.fn();
@@ -200,7 +305,7 @@ describe('AtomTrigger scheduler helpers', () => {
   });
 
   it('ignores a late animation frame after the last sentinel is disposed', () => {
-    const { cancelAnimationFrameSpy, getFrameIds, runFrame } = installQueuedAnimationFrames();
+    const { getFrameIds, runFrame } = installQueuedAnimationFrames();
     const onEnter = vi.fn();
     const node = document.createElement('div');
 
@@ -216,8 +321,6 @@ describe('AtomTrigger scheduler helpers', () => {
     const [frameId] = getFrameIds();
 
     dispose();
-
-    expect(cancelAnimationFrameSpy).toHaveBeenCalledWith(frameId);
 
     runFrame(frameId);
 

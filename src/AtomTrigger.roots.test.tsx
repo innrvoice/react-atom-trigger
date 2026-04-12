@@ -30,7 +30,275 @@ afterEach(() => {
   finishDomTestRun();
 });
 
+function DeferredRootRefHarness({
+  fireOnInitialVisible = false,
+  onEnter,
+  onLeave,
+}: {
+  fireOnInitialVisible?: boolean;
+  onEnter?: (
+    event: Parameters<NonNullable<React.ComponentProps<typeof AtomTrigger>['onEnter']>>[0],
+  ) => void;
+  onLeave?: (
+    event: Parameters<NonNullable<React.ComponentProps<typeof AtomTrigger>['onLeave']>>[0],
+  ) => void;
+}) {
+  const [showRoot, setShowRoot] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const [, forceRootRefresh] = React.useReducer((value: number) => value + 1, 0);
+  const attachRootRef = React.useCallback((node: HTMLDivElement | null) => {
+    rootRef.current = node;
+    forceRootRefresh();
+  }, []);
+
+  return (
+    <div>
+      <button type="button" onClick={() => setShowRoot(value => !value)}>
+        {showRoot ? 'hide root' : 'show root'}
+      </button>
+      {showRoot ? <div ref={attachRootRef} data-testid="deferred-root-ref-root" /> : null}
+      <AtomTrigger
+        className="atom-trigger-sentinel"
+        rootRef={rootRef}
+        fireOnInitialVisible={fireOnInitialVisible}
+        onEnter={onEnter}
+        onLeave={onLeave}
+      />
+    </div>
+  );
+}
+
+function DeferredExplicitRootHarness({
+  onEnter,
+}: {
+  onEnter?: (
+    event: Parameters<NonNullable<React.ComponentProps<typeof AtomTrigger>['onEnter']>>[0],
+  ) => void;
+}) {
+  const [showRoot, setShowRoot] = React.useState(false);
+  const [root, setRoot] = React.useState<HTMLDivElement | null>(null);
+
+  return (
+    <div>
+      <button type="button" onClick={() => setShowRoot(value => !value)}>
+        {showRoot ? 'hide explicit root' : 'show explicit root'}
+      </button>
+      {showRoot ? <div ref={setRoot} data-testid="deferred-explicit-root" /> : null}
+      <AtomTrigger className="atom-trigger-sentinel" root={root} onEnter={onEnter} />
+    </div>
+  );
+}
+
+function PlainDeferredRootRefHarness({
+  onEnter,
+}: {
+  onEnter?: (
+    event: Parameters<NonNullable<React.ComponentProps<typeof AtomTrigger>['onEnter']>>[0],
+  ) => void;
+}) {
+  const [showRoot, setShowRoot] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+
+  return (
+    <div>
+      <button type="button" onClick={() => setShowRoot(value => !value)}>
+        {showRoot ? 'hide plain root' : 'show plain root'}
+      </button>
+      {showRoot ? <div ref={rootRef} data-testid="plain-deferred-root-ref-root" /> : null}
+      <AtomTrigger className="atom-trigger-sentinel" rootRef={rootRef} onEnter={onEnter} />
+    </div>
+  );
+}
+
+function PlainSwappingRootRefHarness({
+  onEnter,
+}: {
+  onEnter?: (
+    event: Parameters<NonNullable<React.ComponentProps<typeof AtomTrigger>['onEnter']>>[0],
+  ) => void;
+}) {
+  const [useSecondRoot, setUseSecondRoot] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+
+  return (
+    <div>
+      <button type="button" onClick={() => setUseSecondRoot(value => !value)}>
+        swap keyed root
+      </button>
+      {useSecondRoot ? (
+        <div key="plain-swap-root-2" data-testid="plain-swap-root-2" ref={rootRef} />
+      ) : (
+        <div key="plain-swap-root-1" data-testid="plain-swap-root-1" ref={rootRef} />
+      )}
+      <AtomTrigger className="atom-trigger-sentinel" rootRef={rootRef} onEnter={onEnter} />
+    </div>
+  );
+}
+
 describe('AtomTrigger roots and margins', () => {
+  it('does not fall back to the viewport while a rootRef is still unresolved', () => {
+    const onEnter = vi.fn();
+    const view = render(<DeferredRootRefHarness onEnter={onEnter} />);
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+
+    if (!(sentinel instanceof HTMLDivElement)) {
+      throw new Error('Deferred rootRef sentinel not found');
+    }
+
+    setScrollAwareRect(sentinel);
+
+    scrollViewport(120);
+    expect(onEnter).toHaveBeenCalledTimes(0);
+    scrollViewport(0);
+
+    fireEvent.click(view.getByRole('button', { name: 'show root' }));
+
+    const root = view.getByTestId('deferred-root-ref-root');
+    if (!(root instanceof HTMLDivElement)) {
+      throw new Error('Deferred rootRef root not found');
+    }
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+
+    scrollElement(root, 120);
+    expect(onEnter).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts observing when a plain useRef root appears after the first render', () => {
+    const onEnter = vi.fn();
+    const view = render(<PlainDeferredRootRefHarness onEnter={onEnter} />);
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+
+    if (!(sentinel instanceof HTMLDivElement)) {
+      throw new Error('Plain deferred rootRef sentinel not found');
+    }
+
+    setScrollAwareRect(sentinel);
+
+    scrollViewport(120);
+    expect(onEnter).toHaveBeenCalledTimes(0);
+
+    fireEvent.click(view.getByRole('button', { name: 'show plain root' }));
+
+    const root = view.getByTestId('plain-deferred-root-ref-root');
+    if (!(root instanceof HTMLDivElement)) {
+      throw new Error('Plain deferred rootRef root not found');
+    }
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+
+    scrollElement(root, 120);
+    expect(onEnter).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires initial visible only after the real rootRef target appears', () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    let frameId = 0;
+    const flushFrames = () => {
+      for (const callback of frameCallbacks.splice(0)) {
+        callback(performance.now());
+      }
+    };
+
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      frameId += 1;
+      return frameId;
+    });
+
+    const onEnter = vi.fn();
+    const view = render(<DeferredRootRefHarness fireOnInitialVisible onEnter={onEnter} />);
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+
+    if (!(sentinel instanceof HTMLDivElement)) {
+      throw new Error('Initial visible deferred rootRef sentinel not found');
+    }
+
+    setScrollAwareRect(sentinel);
+
+    scrollViewport(120);
+    expect(onEnter).toHaveBeenCalledTimes(0);
+
+    fireEvent.click(view.getByRole('button', { name: 'show root' }));
+
+    const root = view.getByTestId('deferred-root-ref-root');
+    if (!(root instanceof HTMLDivElement)) {
+      throw new Error('Initial visible deferred rootRef root not found');
+    }
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+    flushFrames();
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    expect(onEnter.mock.calls[0][0].isInitial).toBe(true);
+    expect(onEnter.mock.calls[0][0].position).toBe('inside');
+  });
+
+  it('does not fall back to the viewport while an explicit root prop is unresolved', () => {
+    const onEnter = vi.fn();
+    const view = render(<DeferredExplicitRootHarness onEnter={onEnter} />);
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+
+    if (!(sentinel instanceof HTMLDivElement)) {
+      throw new Error('Deferred explicit root sentinel not found');
+    }
+
+    setScrollAwareRect(sentinel);
+
+    scrollViewport(120);
+    expect(onEnter).toHaveBeenCalledTimes(0);
+
+    fireEvent.click(view.getByRole('button', { name: 'show explicit root' }));
+
+    const root = view.getByTestId('deferred-explicit-root');
+    if (!(root instanceof HTMLDivElement)) {
+      throw new Error('Deferred explicit root not found');
+    }
+
+    setRect(root, () => new DOMRect(0, 0, 200, 200));
+
+    scrollElement(root, 120);
+    expect(onEnter).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses observation when rootRef disappears instead of replaying viewport transitions', () => {
+    const onEnter = vi.fn();
+    const onLeave = vi.fn();
+    const view = render(<DeferredRootRefHarness onEnter={onEnter} onLeave={onLeave} />);
+
+    fireEvent.click(view.getByRole('button', { name: 'show root' }));
+
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+    const firstRoot = view.getByTestId('deferred-root-ref-root');
+
+    if (!(sentinel instanceof HTMLDivElement) || !(firstRoot instanceof HTMLDivElement)) {
+      throw new Error('Toggleable rootRef harness not found');
+    }
+
+    setRect(firstRoot, () => new DOMRect(0, 0, 200, 200));
+    setScrollAwareRect(sentinel);
+
+    scrollElement(firstRoot, 120);
+    expect(onEnter).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(view.getByRole('button', { name: 'hide root' }));
+    scrollViewport(280);
+
+    expect(onLeave).toHaveBeenCalledTimes(0);
+
+    fireEvent.click(view.getByRole('button', { name: 'show root' }));
+
+    const nextRoot = view.getByTestId('deferred-root-ref-root');
+    if (!(nextRoot instanceof HTMLDivElement)) {
+      throw new Error('Restored rootRef root not found');
+    }
+
+    setRect(nextRoot, () => new DOMRect(0, 0, 200, 200));
+
+    scrollElement(nextRoot, 120);
+    expect(onEnter).toHaveBeenCalledTimes(2);
+  });
+
   it('uses an explicit root element when root is passed directly', () => {
     const onEnter = vi.fn();
 
@@ -379,6 +647,52 @@ describe('AtomTrigger subscription lifecycle', () => {
     const secondRoot = view.getByTestId('swap-root-2');
     if (!(secondRoot instanceof HTMLDivElement)) {
       throw new Error('Second root not found');
+    }
+
+    setRect(secondRoot, () => {
+      secondRootRectCalls += 1;
+      return new DOMRect(0, 0, 200, 200);
+    });
+
+    firstRootRectCalls = 0;
+    secondRootRectCalls = 0;
+    scrollElement(firstRoot, 140);
+
+    expect(firstRootRectCalls).toBe(0);
+    const secondRootCallsBeforeOwnScroll = secondRootRectCalls;
+
+    scrollElement(secondRoot, 140);
+
+    expect(secondRootRectCalls).toBeGreaterThan(secondRootCallsBeforeOwnScroll);
+  });
+
+  it('rebinds when a plain useRef root swaps to a new keyed DOM element', () => {
+    const onEnter = vi.fn();
+    const view = render(<PlainSwappingRootRefHarness onEnter={onEnter} />);
+    const sentinel = view.container.querySelector('.atom-trigger-sentinel');
+    const firstRoot = view.getByTestId('plain-swap-root-1');
+
+    if (!(sentinel instanceof HTMLDivElement) || !(firstRoot instanceof HTMLDivElement)) {
+      throw new Error('Plain swap root harness not found');
+    }
+
+    let firstRootRectCalls = 0;
+    let secondRootRectCalls = 0;
+
+    setRect(firstRoot, () => {
+      firstRootRectCalls += 1;
+      return new DOMRect(0, 0, 200, 200);
+    });
+    setRect(sentinel, () => new DOMRect(0, 260, 10, 10));
+
+    scrollElement(firstRoot, 120);
+    expect(firstRootRectCalls).toBe(1);
+
+    fireEvent.click(view.getByRole('button', { name: 'swap keyed root' }));
+
+    const secondRoot = view.getByTestId('plain-swap-root-2');
+    if (!(secondRoot instanceof HTMLDivElement)) {
+      throw new Error('Plain second root not found');
     }
 
     setRect(secondRoot, () => {

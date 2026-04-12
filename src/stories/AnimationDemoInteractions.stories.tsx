@@ -2,6 +2,7 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
 import { AnimationDemo } from './components/AnimationDemo';
+import { animationDemoActionArgs, animationDemoArgTypes } from './storybookArgs';
 
 const meta: Meta<typeof AnimationDemo> = {
   title: 'Internal Tests/Extended Demo Interactions',
@@ -9,12 +10,17 @@ const meta: Meta<typeof AnimationDemo> = {
   tags: ['!autodocs'],
   parameters: {
     layout: 'fullscreen',
+    controls: {
+      expanded: true,
+    },
   },
   args: {
+    ...animationDemoActionArgs,
     viewportHeight: 540,
     defaultShowTriggers: true,
     scrollBehavior: 'instant',
   },
+  argTypes: animationDemoArgTypes,
   decorators: [
     Story => (
       <div style={{ padding: 8 }}>
@@ -29,6 +35,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const InteractionTimeline: Story = {
+  render: args => <AnimationDemo {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const mode = canvas.getByTestId('animation-demo-mode');
     const aircraft = canvas.getByTestId('animation-demo-aircraft');

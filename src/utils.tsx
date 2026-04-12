@@ -1,4 +1,6 @@
 import React from 'react';
+import { isWindowLike } from './AtomTrigger.runtime';
+import { getStableSnapshot, useCompatSyncExternalStore } from './utils.syncExternalStore';
 
 export type ScrollPosition = {
   x: number;
@@ -21,6 +23,7 @@ export type UseScrollPositionOptions = ListenerOptions & {
 };
 
 const zeroScrollPosition: ScrollPosition = { x: 0, y: 0 };
+const zeroViewportSize: ViewportSize = { width: 0, height: 0 };
 
 const useIsomorphicLayoutEffect =
   typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -78,7 +81,7 @@ function createThrottle(callback: () => void, wait: number): ThrottleController 
 
 function getViewportSize(): ViewportSize {
   if (typeof window === 'undefined') {
-    return { width: 0, height: 0 };
+    return zeroViewportSize;
   }
 
   return {
@@ -87,14 +90,13 @@ function getViewportSize(): ViewportSize {
   };
 }
 
+export const __getViewportSizeForTests = getViewportSize;
+
 function isRefBasedTarget(
   target: UseScrollPositionOptions['target'],
 ): target is React.RefObject<HTMLElement | null> {
   return Boolean(
-    target &&
-    typeof target === 'object' &&
-    !(typeof Window !== 'undefined' && target instanceof Window) &&
-    'current' in target,
+    target && typeof target === 'object' && !isWindowLike(target) && 'current' in target,
   );
 }
 
@@ -114,8 +116,10 @@ function getScrollTarget(target: UseScrollPositionOptions['target']): Window | H
   return window;
 }
 
+export const __getScrollTargetForTests = getScrollTarget;
+
 function isWindowTarget(target: Window | HTMLElement): target is Window {
-  return target === window || (typeof Window !== 'undefined' && target instanceof Window);
+  return target === window || isWindowLike(target);
 }
 
 function getTargetScrollPosition(target: Window | HTMLElement): ScrollPosition {
@@ -133,46 +137,81 @@ function getTargetScrollPosition(target: Window | HTMLElement): ScrollPosition {
   };
 }
 
-export function useViewportSize(options?: ListenerOptions): ViewportSize {
-  const [size, setSize] = React.useState<ViewportSize>(getViewportSize);
+function getInitialScrollPosition(target: UseScrollPositionOptions['target']): ScrollPosition {
+  const initialTarget = getScrollTarget(target);
 
-  React.useEffect(() => {
-    if (typeof window === 'undefined' || options?.enabled === false) {
-      return;
+  if (!initialTarget) {
+    return zeroScrollPosition;
+  }
+
+  return getTargetScrollPosition(initialTarget);
+}
+
+function areScrollPositionsEqual(current: ScrollPosition, next: ScrollPosition): boolean {
+  return current.x === next.x && current.y === next.y;
+}
+
+function areViewportSizesEqual(current: ViewportSize, next: ViewportSize): boolean {
+  return current.width === next.width && current.height === next.height;
+}
+
+export function useViewportSize(options?: ListenerOptions): ViewportSize {
+  const enabled = options?.enabled !== false;
+  const passive = options?.passive;
+  const throttleMs = options?.throttleMs ?? 16;
+  const lastSnapshotRef = React.useRef<ViewportSize>(getViewportSize());
+
+  const getSnapshot = React.useCallback(() => {
+    if (typeof window === 'undefined') {
+      return zeroViewportSize;
     }
 
-    const throttleMs = options?.throttleMs ?? 16;
-    setSize(getViewportSize());
-    const throttledResize = createThrottle(() => {
-      setSize(getViewportSize());
-    }, throttleMs);
+    if (!enabled) {
+      return lastSnapshotRef.current;
+    }
 
-    window.addEventListener('resize', throttledResize.schedule, {
-      passive: options?.passive,
-    });
+    return getStableSnapshot(lastSnapshotRef, getViewportSize(), areViewportSizesEqual);
+  }, [enabled]);
 
-    return () => {
-      throttledResize.cancel();
-      window.removeEventListener('resize', throttledResize.schedule);
-    };
-  }, [options?.enabled, options?.passive, options?.throttleMs]);
+  const subscribe = React.useCallback(
+    (onStoreChange: () => void) => {
+      if (typeof window === 'undefined' || !enabled) {
+        return () => {};
+      }
 
-  return size;
+      const throttledResize = createThrottle(() => {
+        const nextSize = getViewportSize();
+        if (areViewportSizesEqual(lastSnapshotRef.current, nextSize)) {
+          return;
+        }
+
+        lastSnapshotRef.current = nextSize;
+        onStoreChange();
+      }, throttleMs);
+
+      window.addEventListener('resize', throttledResize.schedule, {
+        passive,
+      });
+
+      return () => {
+        throttledResize.cancel();
+        window.removeEventListener('resize', throttledResize.schedule);
+      };
+    },
+    [enabled, passive, throttleMs],
+  );
+
+  return useCompatSyncExternalStore(subscribe, getSnapshot, () => zeroViewportSize);
 }
 
 export function useScrollPosition(options?: UseScrollPositionOptions): ScrollPosition {
   const target = options?.target;
   const targetUsesRef = isRefBasedTarget(target);
-  const [position, setPosition] = React.useState<ScrollPosition>(() => {
-    const initialTarget = getScrollTarget(target);
-
-    if (!initialTarget) {
-      return zeroScrollPosition;
-    }
-
-    return getTargetScrollPosition(initialTarget);
-  });
-  const [refTarget, setRefTarget] = React.useState<Window | HTMLElement | null>(() =>
+  const enabled = options?.enabled !== false;
+  const passive = options?.passive;
+  const throttleMs = options?.throttleMs ?? 16;
+  const lastSnapshotRef = React.useRef<ScrollPosition>(getInitialScrollPosition(target));
+  const [trackedRefTarget, setTrackedRefTarget] = React.useState<Window | HTMLElement | null>(() =>
     targetUsesRef ? getScrollTarget(target) : null,
   );
 
@@ -181,38 +220,59 @@ export function useScrollPosition(options?: UseScrollPositionOptions): ScrollPos
       return;
     }
 
+    // target.current can swap during commit without changing the ref object itself.
+    // Mirror it after each commit so subscriptions rebind to the live scroll container.
     const nextTarget = getScrollTarget(target);
-    setRefTarget(currentTarget => (currentTarget === nextTarget ? currentTarget : nextTarget));
+    setTrackedRefTarget(currentTarget =>
+      currentTarget === nextTarget ? currentTarget : nextTarget,
+    );
   });
 
-  const scrollTarget = targetUsesRef ? refTarget : getScrollTarget(target);
+  const scrollTarget = targetUsesRef ? trackedRefTarget : getScrollTarget(target);
 
-  React.useEffect(() => {
-    if (options?.enabled === false) {
-      setPosition(zeroScrollPosition);
-      return;
+  const getSnapshot = React.useCallback(() => {
+    if (!enabled) {
+      return lastSnapshotRef.current;
     }
 
     if (!scrollTarget) {
-      setPosition(zeroScrollPosition);
-      return;
+      return getStableSnapshot(lastSnapshotRef, zeroScrollPosition, areScrollPositionsEqual);
     }
 
-    const throttleMs = options?.throttleMs ?? 16;
-    setPosition(getTargetScrollPosition(scrollTarget));
-    const throttledScroll = createThrottle(() => {
-      setPosition(getTargetScrollPosition(scrollTarget));
-    }, throttleMs);
+    return getStableSnapshot(
+      lastSnapshotRef,
+      getTargetScrollPosition(scrollTarget),
+      areScrollPositionsEqual,
+    );
+  }, [enabled, scrollTarget]);
 
-    scrollTarget.addEventListener('scroll', throttledScroll.schedule, {
-      passive: options?.passive,
-    });
+  const subscribe = React.useCallback(
+    (onStoreChange: () => void) => {
+      if (!enabled || !scrollTarget) {
+        return () => {};
+      }
 
-    return () => {
-      throttledScroll.cancel();
-      scrollTarget.removeEventListener('scroll', throttledScroll.schedule);
-    };
-  }, [options?.enabled, options?.passive, options?.throttleMs, scrollTarget]);
+      const throttledScroll = createThrottle(() => {
+        const nextPosition = getTargetScrollPosition(scrollTarget);
+        if (areScrollPositionsEqual(lastSnapshotRef.current, nextPosition)) {
+          return;
+        }
 
-  return position;
+        lastSnapshotRef.current = nextPosition;
+        onStoreChange();
+      }, throttleMs);
+
+      scrollTarget.addEventListener('scroll', throttledScroll.schedule, {
+        passive,
+      });
+
+      return () => {
+        throttledScroll.cancel();
+        scrollTarget.removeEventListener('scroll', throttledScroll.schedule);
+      };
+    },
+    [enabled, passive, scrollTarget, throttleMs],
+  );
+
+  return useCompatSyncExternalStore(subscribe, getSnapshot, () => zeroScrollPosition);
 }

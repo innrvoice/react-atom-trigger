@@ -1,16 +1,27 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
-import { AtomTrigger } from '../index';
-import { ChildModeInteractionHarness } from './components/DeterministicInteractionHarness';
+import {
+  ChildModeInteractionHarness,
+  type ChildModeInteractionHarnessProps,
+} from './components/DeterministicInteractionHarness';
+import { atomTriggerActionArgs, atomTriggerArgTypes } from './storybookArgs';
 
-const meta: Meta<typeof AtomTrigger> = {
+const meta: Meta<ChildModeInteractionHarnessProps> = {
   title: 'Internal Tests/AtomTrigger Interactions/Child Mode',
-  component: AtomTrigger,
+  component: ChildModeInteractionHarness,
   tags: ['!autodocs'],
   parameters: {
     layout: 'padded',
+    controls: {
+      expanded: true,
+    },
   },
+  args: {
+    ...atomTriggerActionArgs,
+    threshold: 0,
+  },
+  argTypes: atomTriggerArgTypes,
 };
 
 export default meta;
@@ -18,7 +29,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const BasicChildModeBehavior: Story = {
-  render: () => <ChildModeInteractionHarness />,
+  render: args => <ChildModeInteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const triggerEnter = canvas.getByRole('button', { name: /trigger child enter/i });
     const triggerLeave = canvas.getByRole('button', { name: /trigger child leave/i });
@@ -56,7 +67,10 @@ export const BasicChildModeBehavior: Story = {
 };
 
 export const ThresholdChildModeBehavior: Story = {
-  render: () => <ChildModeInteractionHarness threshold={0.75} />,
+  args: {
+    threshold: 0.75,
+  },
+  render: args => <ChildModeInteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const belowThreshold = canvas.getByRole('button', { name: /scroll below threshold/i });
     const triggerThresholdEnter = canvas.getByRole('button', { name: /trigger threshold enter/i });

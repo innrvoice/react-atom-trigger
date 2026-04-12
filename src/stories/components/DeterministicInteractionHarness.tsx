@@ -1,17 +1,19 @@
 import React from 'react';
 import { AtomTrigger } from '../../index';
-import type { AtomTriggerEvent } from '../../index';
+import type { AtomTriggerEvent, AtomTriggerProps } from '../../index';
 
 export type InteractionHarnessProps = {
   once?: boolean;
   oncePerDirection?: boolean;
   fireOnInitialVisible?: boolean;
   initialVerticalScrollTop?: number;
-};
+} & Pick<AtomTriggerProps, 'onEnter' | 'onLeave' | 'onEvent'>;
 
 export type ChildModeInteractionHarnessProps = {
   threshold?: number;
-};
+} & Pick<AtomTriggerProps, 'onEnter' | 'onLeave' | 'onEvent'>;
+
+type SharedHarnessEventCallbacks = Pick<AtomTriggerProps, 'onEnter' | 'onLeave' | 'onEvent'>;
 
 function CounterPanel({
   title,
@@ -83,6 +85,9 @@ export function DeterministicInteractionHarness({
   oncePerDirection = false,
   fireOnInitialVisible = false,
   initialVerticalScrollTop = 0,
+  onEnter,
+  onLeave,
+  onEvent,
 }: InteractionHarnessProps) {
   const verticalRootRef = React.useRef<HTMLDivElement>(null);
   const horizontalRootRef = React.useRef<HTMLDivElement>(null);
@@ -139,6 +144,14 @@ export function DeterministicInteractionHarness({
   const handleEvent = React.useCallback((event: AtomTriggerEvent) => {
     setEvents(prev => [event, ...prev].slice(0, 12));
   }, []);
+
+  const handleHarnessEvent = React.useCallback(
+    (event: AtomTriggerEvent) => {
+      handleEvent(event);
+      onEvent?.(event);
+    },
+    [handleEvent, onEvent],
+  );
 
   const scrollVertical = React.useCallback((nextTop: number) => {
     const root = verticalRootRef.current;
@@ -255,7 +268,9 @@ export function DeterministicInteractionHarness({
               oncePerDirection={oncePerDirection}
               fireOnInitialVisible={fireOnInitialVisible}
               rootRef={verticalRootRef}
-              onEvent={handleEvent}
+              onEnter={onEnter}
+              onLeave={onLeave}
+              onEvent={handleHarnessEvent}
             />
             <div style={{ height: 260, paddingTop: 8 }}>
               <em>Vertical bottom spacer</em>
@@ -284,7 +299,9 @@ export function DeterministicInteractionHarness({
                 oncePerDirection={oncePerDirection}
                 fireOnInitialVisible={fireOnInitialVisible}
                 rootRef={horizontalRootRef}
-                onEvent={handleEvent}
+                onEnter={onEnter}
+                onLeave={onLeave}
+                onEvent={handleHarnessEvent}
               />
               <div style={{ width: 260, minWidth: 260, padding: '0 12px' }}>
                 <em>Horizontal right spacer</em>
@@ -304,7 +321,11 @@ export function DeterministicInteractionHarness({
   );
 }
 
-export function MultiSentinelInteractionHarness() {
+export function MultiSentinelInteractionHarness({
+  onEnter,
+  onLeave,
+  onEvent,
+}: SharedHarnessEventCallbacks) {
   const sharedRootRef = React.useRef<HTMLDivElement>(null);
   const scrollTopRef = React.useRef(0);
   const scrollLeftRef = React.useRef(0);
@@ -476,32 +497,44 @@ export function MultiSentinelInteractionHarness() {
                 key={`multi-horizontal-first-${triggerKey}`}
                 className="atom-trigger-sentinel multi-horizontal-first"
                 rootRef={sharedRootRef}
+                onEnter={onEnter}
+                onLeave={onLeave}
                 onEvent={event => {
                   setFirstEvents(prev => [event, ...prev].slice(0, 12));
+                  onEvent?.(event);
                 }}
               />
               <AtomTrigger
                 key={`multi-horizontal-second-${triggerKey}`}
                 className="atom-trigger-sentinel multi-horizontal-second"
                 rootRef={sharedRootRef}
+                onEnter={onEnter}
+                onLeave={onLeave}
                 onEvent={event => {
                   setSecondEvents(prev => [event, ...prev].slice(0, 12));
+                  onEvent?.(event);
                 }}
               />
               <AtomTrigger
                 key={`multi-vertical-third-${triggerKey}`}
                 className="atom-trigger-sentinel--vertical multi-vertical-third"
                 rootRef={sharedRootRef}
+                onEnter={onEnter}
+                onLeave={onLeave}
                 onEvent={event => {
                   setThirdEvents(prev => [event, ...prev].slice(0, 12));
+                  onEvent?.(event);
                 }}
               />
               <AtomTrigger
                 key={`multi-vertical-fourth-${triggerKey}`}
                 className="atom-trigger-sentinel--vertical multi-vertical-fourth"
                 rootRef={sharedRootRef}
+                onEnter={onEnter}
+                onLeave={onLeave}
                 onEvent={event => {
                   setFourthEvents(prev => [event, ...prev].slice(0, 12));
+                  onEvent?.(event);
                 }}
               />
             </div>
@@ -537,7 +570,17 @@ export function MultiSentinelInteractionHarness() {
   );
 }
 
-export function FixedHeaderViewportHarness() {
+type FixedHeaderViewportHarnessProps = Pick<
+  AtomTriggerProps,
+  'threshold' | 'onEnter' | 'onLeave' | 'onEvent'
+>;
+
+export function FixedHeaderViewportHarness({
+  threshold = 0,
+  onEnter,
+  onLeave,
+  onEvent,
+}: FixedHeaderViewportHarnessProps) {
   const scrollTopRef = React.useRef(0);
   const [harnessReady, setHarnessReady] = React.useState(false);
   const [triggerKey, setTriggerKey] = React.useState(0);
@@ -675,8 +718,12 @@ export function FixedHeaderViewportHarness() {
             key={`fixed-header-viewport-${triggerKey}`}
             className="atom-trigger-sentinel fixed-header-viewport-sentinel"
             rootMargin="-100px 0px 0px 0px"
+            threshold={threshold}
+            onEnter={onEnter}
+            onLeave={onLeave}
             onEvent={event => {
               setEvents(prev => [event, ...prev].slice(0, 12));
+              onEvent?.(event);
             }}
           />
         </div>
@@ -729,7 +776,12 @@ export function FixedHeaderViewportHarness() {
   );
 }
 
-export function ChildModeInteractionHarness({ threshold = 0 }: ChildModeInteractionHarnessProps) {
+export function ChildModeInteractionHarness({
+  threshold = 0,
+  onEnter,
+  onLeave,
+  onEvent,
+}: ChildModeInteractionHarnessProps) {
   const rootRef = React.useRef<HTMLDivElement>(null);
   const scrollTopRef = React.useRef(0);
   const [harnessReady, setHarnessReady] = React.useState(false);
@@ -881,8 +933,11 @@ export function ChildModeInteractionHarness({ threshold = 0 }: ChildModeInteract
               key={`child-mode-${triggerKey}`}
               rootRef={rootRef}
               threshold={threshold}
+              onEnter={onEnter}
+              onLeave={onLeave}
               onEvent={event => {
                 setEvents(prev => [event, ...prev].slice(0, 12));
+                onEvent?.(event);
               }}
             >
               <article

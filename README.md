@@ -36,12 +36,18 @@ npm install react-atom-trigger
 yarn add react-atom-trigger
 ```
 
+The published package does not enforce a specific Node.js engine.
+Runtime compatibility is determined by your React version, browser target and bundler setup.
+
+The public React compatibility contract for `v2` is the published peer range: React `16.8` through
+`19.x`.
+
 ## How it works
 
 `react-atom-trigger` uses a mixed approach.
 
 - Geometry is the real source of truth for `enter` and `leave`.
-- `IntersectionObserver` is only there to wake things up when the browser notices a layout shift.
+- `IntersectionObserver` is only there to wake things up when the browser notices a nearby layout shift.
 - `rootMargin` logic is handled by the library itself, so it stays consistent and does not depend on native observer quirks.
 
 In practice this means `AtomTrigger` reacts to:
@@ -50,7 +56,7 @@ In practice this means `AtomTrigger` reacts to:
 - window resize
 - root resize
 - sentinel resize
-- layout shifts that move the observed element even if no scroll event happened
+- nearby layout shifts that move the observed element even if no scroll event happened
 
 This is the main reason `v2` can support custom margin-aware behavior and still react to browser-driven layout changes.
 
@@ -129,6 +135,10 @@ element:
 
 If the ref never reaches a DOM node, child mode cannot observe anything.
 
+If a custom child renders a placeholder first and only exposes its DOM node a moment later,
+`AtomTrigger` waits briefly before showing the missing-ref warning so normal async mount flows do
+not get flagged too early.
+
 ## API
 
 ```ts
@@ -160,6 +170,7 @@ interface AtomTriggerProps {
 - `threshold`: a number from `0` to `1`. It affects `enter`, not `leave`.
 - `root`: use a specific DOM element as the visible area.
 - `rootRef`: same idea as `root`, but better when the container is created in JSX. If both are passed, `rootRef` wins.
+- `root` / `rootRef`: if you pass one explicitly but it is still `null`, observation pauses until that real root exists. It does not silently fall back to the viewport.
 - `rootMargin`: expand or shrink the effective root. String values use `IntersectionObserver`-style syntax. A four-number array is treated as `[top, right, bottom, left]` in pixels.
 - `className`: applies only to the internal sentinel.
 
@@ -218,14 +229,20 @@ useViewportSize(options?: {
 }): { width: number; height: number }
 ```
 
-Both hooks are SSR-safe. Default throttling is `16ms`.
+Both hooks are SSR-safe and hydration-safe across the supported React range. During hydration, the first client render matches the server snapshot and then refreshes from the live source, including the compat path used when React does not expose `useSyncExternalStore`. Default throttling is `16ms`.
+
+If you pass `enabled={false}`, the hook pauses its listeners but keeps the latest value it already knows.
+It does not fake a reset back to zero.
+When you enable it again, it reads from the source immediately and then continues updating as usual.
 
 ## Notes
 
 - In sentinel mode, `threshold` is usually only interesting if your sentinel has real width or height. The default sentinel is almost point-like.
+- The internal sentinel intentionally uses a non-block display so it behaves like a point-like marker instead of stretching into a full-width placeholder.
 - Child mode needs exactly one top-level child and any custom component used there needs to pass the received ref through to a DOM element.
 - In React 19, a plain function component can also work in child mode if it passes the received `ref` prop through to a DOM element.
-- `rootMargin` is handled by the library geometry logic. `IntersectionObserver` is only used as a wake-up signal for layout shifts.
+- If you pass `root` or `rootRef` explicitly and it is not ready yet, observation pauses instead of falling back to the viewport.
+- `rootMargin` is handled by the library geometry logic. `IntersectionObserver` is only used as a nearby wake-up signal for layout shifts.
 
 ## Migration from v1
 
@@ -288,10 +305,16 @@ Quick way to tweak it in the browser.
 pnpm install
 pnpm lint
 pnpm test
+pnpm test:coverage
 pnpm test:storybook
 pnpm build
 pnpm format:check
 ```
+
+Coverage note:
+
+- `pnpm test:coverage` is the official unit coverage signal used in CI and Codecov.
+- `pnpm test:storybook` is a separate browser regression gate and is not merged into the official coverage number.
 
 ## Storybook (Static Build)
 

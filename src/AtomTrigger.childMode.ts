@@ -3,10 +3,13 @@ import {
   fragmentChildWarning,
   invalidChildCountWarning,
   invalidChildElementWarning,
+  nonDomChildRefWarning,
+  unsupportedChildRefWarning,
+  warnOnce,
 } from './AtomTrigger.warnings';
+import { isDomElementLike } from './AtomTrigger.runtime';
 
-const forwardRefSymbol = Symbol.for('react.forward_ref');
-const memoSymbol = Symbol.for('react.memo');
+const missingDomRefWarningDelayMs = 16;
 
 export function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null): void {
   if (!ref) {
@@ -21,40 +24,50 @@ export function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null): vo
   ref.current = value;
 }
 
-export function supportsObservationRef(type: unknown): boolean {
-  if (typeof type === 'string') {
-    return true;
+export type ObservedChildBinding = {
+  childNode: Element | null;
+  attachObservedChildRef: (value: unknown) => void;
+};
+
+export type ChildElementWithOptionalRef = React.ReactElement<{ ref?: React.Ref<unknown> }> & {
+  ref?: React.Ref<unknown>;
+};
+
+function readOwnRefProperty(value: unknown): React.Ref<unknown> | undefined {
+  if (!value || (typeof value !== 'object' && typeof value !== 'function')) {
+    return undefined;
   }
 
-  if (typeof type === 'function') {
-    return true;
+  const descriptor = Object.getOwnPropertyDescriptor(value, 'ref');
+  if (!descriptor || !('value' in descriptor)) {
+    return undefined;
   }
 
-  if (typeof type !== 'object' || type === null) {
-    return false;
+  return descriptor.value as React.Ref<unknown> | undefined;
+}
+
+export function getElementRef(
+  element: ChildElementWithOptionalRef | null,
+): React.Ref<unknown> | undefined {
+  if (!element) {
+    return undefined;
   }
 
-  const typedType = type as {
-    $$typeof?: symbol;
-    type?: React.ElementType;
-  };
-
-  if (typedType.$$typeof === forwardRefSymbol) {
-    return true;
+  // React 19 can surface the child ref on props.ref, while older React versions can still
+  // expose it on the element itself. Read only own data properties so this stays compatible
+  // without depending on React internals or tripping foreign getters
+  const propsRef = readOwnRefProperty(element.props);
+  if (propsRef !== undefined) {
+    return propsRef;
   }
 
-  if (typedType.$$typeof === memoSymbol && typedType.type) {
-    return supportsObservationRef(typedType.type);
-  }
-
-  return false;
+  return readOwnRefProperty(element);
 }
 
 export function getInvalidChildWarning(
   usesChildObservation: boolean,
   childCount: number,
   singleChildElement: React.ReactElement | null,
-  childType: unknown,
 ): string | null {
   if (!usesChildObservation) {
     return null;
@@ -68,13 +81,76 @@ export function getInvalidChildWarning(
     return invalidChildElementWarning;
   }
 
-  if (childType === React.Fragment) {
+  if (singleChildElement.type === React.Fragment) {
     return fragmentChildWarning;
   }
 
-  if (!childType || !supportsObservationRef(childType)) {
-    return null;
-  }
-
   return null;
+}
+
+export function useObservedChildNode({
+  originalChildRef,
+  hasObservedChild,
+  invalidChildWarning,
+  shouldWarnAboutMissingDomRef: shouldCheckMissingDomRef,
+}: {
+  originalChildRef: React.Ref<unknown> | undefined;
+  hasObservedChild: boolean;
+  invalidChildWarning: string | null;
+  shouldWarnAboutMissingDomRef: boolean;
+}): ObservedChildBinding {
+  const [childNode, setChildNode] = React.useState<Element | null>(null);
+  const childNodeRef = React.useRef<Element | null>(null);
+
+  const clearObservedChildNode = React.useCallback(() => {
+    childNodeRef.current = null;
+    setChildNode(currentNode => (currentNode === null ? currentNode : null));
+  }, []);
+
+  const attachObservedChildRef = React.useCallback(
+    (value: unknown) => {
+      assignRef(originalChildRef, value);
+
+      if (value === null) {
+        clearObservedChildNode();
+        return;
+      }
+
+      if (isDomElementLike(value)) {
+        childNodeRef.current = value;
+        setChildNode(currentNode => (currentNode === value ? currentNode : value));
+        return;
+      }
+
+      clearObservedChildNode();
+      warnOnce(nonDomChildRefWarning);
+    },
+    [clearObservedChildNode, originalChildRef],
+  );
+
+  React.useEffect(() => {
+    const shouldScheduleMissingDomRefWarning =
+      hasObservedChild && !invalidChildWarning && !childNode && shouldCheckMissingDomRef;
+
+    if (typeof window === 'undefined' || !shouldScheduleMissingDomRefWarning) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (childNodeRef.current) {
+        return;
+      }
+
+      warnOnce(unsupportedChildRefWarning);
+    }, missingDomRefWarningDelayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [hasObservedChild, invalidChildWarning, childNode, shouldCheckMissingDomRef]);
+
+  return {
+    childNode,
+    attachObservedChildRef,
+  };
 }
