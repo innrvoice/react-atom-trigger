@@ -5,6 +5,10 @@ import {
   warnOnce,
 } from './AtomTrigger.warnings';
 
+function stubProcess(processValue: Partial<Pick<NodeJS.Process, 'env'>>): void {
+  vi.stubGlobal('process', processValue as unknown as NodeJS.Process);
+}
+
 afterEach(() => {
   __resetWarningsForTests();
   vi.restoreAllMocks();
@@ -37,9 +41,43 @@ describe('AtomTrigger warnings', () => {
   it('falls back to import.meta-driven development detection when process.env is unavailable', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    vi.stubGlobal('process', {} as NodeJS.Process);
+    stubProcess({});
     warnOnce('[react-atom-trigger] test warning');
 
     expect(warn).toHaveBeenCalledWith('[react-atom-trigger] test warning');
+  });
+
+  it('stays silent outside development runtimes', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    stubProcess({
+      env: {
+        NODE_ENV: 'production',
+      },
+    });
+    warnOnce('[react-atom-trigger] production warning');
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('does not throw when console.warn is unavailable in development', () => {
+    stubProcess({
+      env: {
+        NODE_ENV: 'development',
+      },
+    });
+
+    const originalWarn = console.warn;
+    Object.defineProperty(console, 'warn', {
+      configurable: true,
+      value: undefined,
+    });
+
+    expect(() => warnOnce('[react-atom-trigger] no-console-warn')).not.toThrow();
+
+    Object.defineProperty(console, 'warn', {
+      configurable: true,
+      value: originalWarn,
+    });
   });
 });

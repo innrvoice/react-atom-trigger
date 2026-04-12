@@ -30,6 +30,27 @@ async function importFallbackUtilsModule() {
   return import('./utils');
 }
 
+async function importUtilsModuleWithMockedCompatHook() {
+  vi.resetModules();
+  vi.doMock('./utils.syncExternalStore', async () => {
+    const actual = await vi.importActual<typeof import('./utils.syncExternalStore')>(
+      './utils.syncExternalStore',
+    );
+
+    return {
+      ...actual,
+      useCompatSyncExternalStore: function <T>(
+        _subscribe: () => () => void,
+        getSnapshot: () => T,
+        _getServerSnapshot: () => T,
+      ): T {
+        return getSnapshot();
+      },
+    };
+  });
+  return import('./utils');
+}
+
 async function renderToStringWithoutWindow(element: React.ReactElement): Promise<string> {
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
@@ -96,6 +117,7 @@ function setWindowSize(width: number, height: number): void {
 
 afterEach(() => {
   vi.doUnmock('react');
+  vi.doUnmock('./utils.syncExternalStore');
   vi.resetModules();
   vi.unstubAllGlobals();
 });
@@ -193,6 +215,37 @@ describe('sync external store compat helpers', () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
+  it('skips fallback updates when the notified snapshot is unchanged', async () => {
+    const { useCompatSyncExternalStore } = await importFallbackModule();
+    const sharedSnapshot = { value: 1 };
+    let notifyStoreChange: (() => void) | undefined;
+    let renderCount = 0;
+
+    function Harness() {
+      renderCount += 1;
+      const subscribe = React.useCallback((onStoreChange: () => void) => {
+        notifyStoreChange = onStoreChange;
+        return () => {};
+      }, []);
+      const getSnapshot = React.useCallback(() => sharedSnapshot, []);
+      const getServerSnapshot = React.useCallback(() => sharedSnapshot, []);
+      const value = useCompatSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+      return <output data-testid="stable-fallback-snapshot">{value.value}</output>;
+    }
+
+    const view = render(<Harness />);
+
+    expect(view.getByTestId('stable-fallback-snapshot').textContent).toBe('1');
+    expect(renderCount).toBe(1);
+
+    act(() => {
+      notifyStoreChange?.();
+    });
+
+    expect(renderCount).toBe(1);
+  });
+
   it('hydrates useScrollPosition in the fallback path without a server/client mismatch', async () => {
     const { useScrollPosition } = await importFallbackUtilsModule();
 
@@ -224,6 +277,23 @@ describe('sync external store compat helpers', () => {
 
     root.unmount();
     container.remove();
+  });
+
+  it('returns the zero viewport snapshot when the live viewport snapshot runs without window', async () => {
+    const { useViewportSize } = await importUtilsModuleWithMockedCompatHook();
+
+    function Harness() {
+      const size = useViewportSize();
+      return (
+        <output>
+          {size.width},{size.height}
+        </output>
+      );
+    }
+
+    expect((await renderToStringWithoutWindow(<Harness />)).replaceAll('<!-- -->', '')).toContain(
+      '0,0',
+    );
   });
 
   it('hydrates useViewportSize in the fallback path without a server/client mismatch', async () => {

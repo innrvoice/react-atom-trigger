@@ -330,6 +330,24 @@ describe('utility hooks', () => {
     expect(position.textContent).toBe('11,40');
   });
 
+  it('ignores window scroll notifications when the position did not change', () => {
+    const view = render(<WindowScrollPositionHarness throttleMs={0} />);
+    const position = view.getByTestId('window-scroll-position');
+
+    act(() => {
+      setWindowScroll(5, 10);
+      fireEvent.scroll(window);
+    });
+
+    expect(position.textContent).toBe('5,10');
+
+    act(() => {
+      fireEvent.scroll(window);
+    });
+
+    expect(position.textContent).toBe('5,10');
+  });
+
   it('throttles viewport resize updates with leading and trailing behavior', () => {
     vi.useFakeTimers();
 
@@ -366,6 +384,19 @@ describe('utility hooks', () => {
     });
 
     expect(size.textContent).toBe('1300,768');
+  });
+
+  it('ignores viewport resize notifications when the size did not change', () => {
+    const view = render(<ViewportSizeHarness throttleMs={0} />);
+    const size = view.getByTestId('viewport-size');
+
+    expect(size.textContent).toBe('1024,768');
+
+    act(() => {
+      fireEvent.resize(window);
+    });
+
+    expect(size.textContent).toBe('1024,768');
   });
 
   it('cancels a pending throttled scroll update when the listener unmounts', () => {

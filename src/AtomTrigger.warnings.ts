@@ -32,11 +32,7 @@ type ImportMetaEnvShape = {
 };
 
 function getImportMetaEnv(): ImportMetaEnvShape | null {
-  try {
-    return (import.meta as ImportMeta & { env?: ImportMetaEnvShape }).env ?? null;
-  } catch {
-    return null;
-  }
+  return (import.meta as ImportMeta & { env?: ImportMetaEnvShape }).env ?? null;
 }
 
 function getKnownNodeEnv(): 'development' | 'production' | null {
