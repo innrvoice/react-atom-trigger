@@ -327,5 +327,3 @@ pnpm build:sb
 Output:
 
 `storybook-static/`
-
-This directory is used for deployment to `storybook.atomtrigger.dev`.

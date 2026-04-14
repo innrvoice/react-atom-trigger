@@ -68,6 +68,12 @@
   animation: sunGlowFloat 36s linear infinite;
 }
 
+.sunGlowScale {
+  transform-box: fill-box;
+  transform-origin: center center;
+  transition: transform 1s ease-in-out;
+}
+
 .moon {
   transition:
     transform 1s ease-out,
