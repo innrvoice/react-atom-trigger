@@ -1,4 +1,7 @@
 import React from 'react';
+import seaBeamLargeMask from './assets/sea-beam-large.png';
+import seaBeamSmallMask from './assets/sea-beam-small.png';
+import sunGlowMask from './assets/sun-glow.png';
 import { classNames } from '../classNames';
 import styles from './Scene.module.css';
 import type { AnimationMode } from '../types';
@@ -19,6 +22,7 @@ type ScenePreset = {
   seaBeamTop: string;
   seaBeamBottom: string;
   seaBeamOpacity: number;
+  // Kept as source-of-truth from the filtered SVG version; runtime no longer scales the beam.
   seaBeamScale: number;
   hillBack: string;
   hillFrontTop: string;
@@ -35,7 +39,22 @@ type ScenePreset = {
   moonTranslateY: number;
 };
 
+const sceneWidth = 1024;
+const sceneHeight = 768;
+const viewBox = `0 0 ${sceneWidth} ${sceneHeight}`;
 const horizonY = 281.97;
+const horizonOverlap = 2;
+const sunCenterX = 512.16;
+const sunRadius = 41;
+const sunGlowSize = 300;
+const sunGlowX = sunCenterX - sunGlowSize / 2;
+const sunGlowY = horizonY - sunGlowSize / 2;
+const moonCenterY = 141.99;
+const moonGlowRadius = 150;
+const beamX = 267.34;
+const beamY = 261.74;
+const beamWidth = 489.32;
+const beamHeight = 195.22;
 
 const presets: Record<AnimationMode, ScenePreset> = {
   day: {
@@ -151,261 +170,285 @@ const presets: Record<AnimationMode, ScenePreset> = {
 export function Scene({ mode }: SceneProps) {
   const preset = presets[mode];
   const idPrefix = React.useId().replace(/:/g, '');
-  const sceneId = `${idPrefix}-scene`;
-  const sunHaloFilterId = `${idPrefix}-sun-halo-filter`;
-  const moonFormFilterId = `${idPrefix}-moon-form-filter`;
-  const moonSeaGlareFilterId = `${idPrefix}-moon-sea-glare-filter`;
   const skyGradientId = `${idPrefix}-sky`;
   const seaGradientId = `${idPrefix}-sea`;
-  const hillFrontGradientId = `${idPrefix}-hill-front-grad`;
-  const moonGradientId = `${idPrefix}-moon-grad`;
-  const seaBeamGradientId = `${idPrefix}-sea-beam-grad`;
-  const seaGlareGradientId = `${idPrefix}-sea-glare-grad`;
-  const seaMaskId = `${idPrefix}-sea-mask`;
+  const hillFrontGradientId = `${idPrefix}-hill-front`;
+  const sunCoreGradientId = `${idPrefix}-sun-core`;
+  const moonGlowGradientId = `${idPrefix}-moon-glow`;
+  const moonGradientId = `${idPrefix}-moon`;
+  const seaGlareGradientId = `${idPrefix}-sea-glare`;
+  const showLargeBeam = mode === 'sunset' || mode === 'sunrise';
+  const showSmallBeam = mode === 'night';
 
   return (
     <div className={styles.root} data-mode={mode}>
-      <svg
-        id={sceneId}
-        xmlns="http://www.w3.org/2000/svg"
-        xmlnsXlink="http://www.w3.org/1999/xlink"
-        width="100%"
-        height="100%"
-        viewBox="0 0 1024 768"
-        preserveAspectRatio="xMidYMin slice"
-      >
-        <defs>
-          <filter id={sunHaloFilterId} filterUnits="userSpaceOnUse" x="0" y="0">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="34" result="blur" />
-            <feComposite
-              in="blur"
-              in2="SourceGraphic"
-              operator="arithmetic"
-              k1="0"
-              k2="1"
-              k3="1"
-              k4="0"
-              result="litPaint"
-            />
-          </filter>
-          <filter id={moonFormFilterId} filterUnits="userSpaceOnUse" x="0" y="0">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="34" result="blur" />
-          </filter>
-          <filter id={moonSeaGlareFilterId} filterUnits="userSpaceOnUse" x="0" y="0">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="15" />
-          </filter>
-          <linearGradient
-            id={skyGradientId}
-            x1="512"
-            y1="334.81"
-            x2="512"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop offset="0" stopColor={preset.skyTop} className={styles.transition} />
-            <stop offset="1" stopColor={preset.skyBottom} className={styles.transition} />
-          </linearGradient>
-          <linearGradient
-            id={seaGradientId}
-            x1="512"
-            y1="608.07"
-            x2="512"
-            y2={horizonY}
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop offset="0.18" stopColor={preset.seaBottom} className={styles.transition} />
-            <stop offset="0.86" stopColor={preset.seaTop} className={styles.transition} />
-            <stop offset="1" stopColor={preset.seaEdge} className={styles.transition} />
-          </linearGradient>
-          <linearGradient
-            id={hillFrontGradientId}
-            x1="512"
-            y1="768"
-            x2="512"
-            y2="334.81"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop offset="0.42" stopColor={preset.hillFrontBottom} className={styles.transition} />
-            <stop offset="1" stopColor={preset.hillFrontTop} className={styles.transition} />
-          </linearGradient>
-          <linearGradient
-            id={moonGradientId}
-            x1="400"
-            y1="181.67"
-            x2="576.05"
-            y2="176"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop offset="0" stopColor={preset.moonTintStart} className={styles.transition} />
-            <stop offset="1" stopColor={preset.moonTintEnd} className={styles.transition} />
-          </linearGradient>
-          <linearGradient
-            id={seaBeamGradientId}
-            x1="512.06"
-            y1="493.65"
-            x2="512.06"
-            y2="298.43"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop
-              offset="0.3"
-              stopColor={preset.seaBeamTop}
-              stopOpacity="0"
-              className={styles.transition}
-            />
-            <stop
-              offset="0.89"
-              stopColor={preset.seaBeamBottom}
-              stopOpacity="0.4"
-              className={styles.transition}
-            />
-            <stop
-              offset="1"
-              stopColor={preset.seaBeamBottom}
-              stopOpacity="1"
-              className={styles.transition}
-            />
-          </linearGradient>
-          <linearGradient
-            id={seaGlareGradientId}
-            x1="512"
-            y1="520"
-            x2="512"
-            y2={horizonY}
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop
-              offset="0.12"
-              stopColor={preset.glareTop}
-              stopOpacity="0"
-              className={styles.transition}
-            />
-            <stop
-              offset="0.9"
-              stopColor={preset.glareBottom}
-              stopOpacity="0.55"
-              className={styles.transition}
-            />
-            <stop
-              offset="1"
-              stopColor={preset.glareBottom}
-              stopOpacity="1"
-              className={styles.transition}
-            />
-          </linearGradient>
-          <mask id={seaMaskId}>
-            <rect x="0" y="0" width="1024" height={horizonY} fill="black" />
-            <rect x="0" y={horizonY} width="1024" height="1000" fill="white" />
-          </mask>
-        </defs>
-
-        <rect
-          width="1024"
-          height={horizonY}
-          fill={`url(#${skyGradientId})`}
-          className={styles.transition}
-        />
-
-        <g
-          className={classNames(styles.celestial, styles.sun)}
-          style={{
-            transform: `translateY(${preset.sunTranslateY}px)`,
-            opacity: preset.sunOpacity,
-          }}
+      <div className={classNames(styles.layer, styles.layerSky)}>
+        <svg
+          className={styles.svg}
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMin slice"
         >
-          <circle
-            cx="512.16"
-            cy={horizonY}
-            r="46.38"
-            filter={`url(#${sunHaloFilterId})`}
-            fill={preset.sunHalo}
+          <defs>
+            <linearGradient
+              id={skyGradientId}
+              x1="512"
+              y1="334.81"
+              x2="512"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0" stopColor={preset.skyTop} className={styles.transition} />
+              <stop offset="1" stopColor={preset.skyBottom} className={styles.transition} />
+            </linearGradient>
+          </defs>
+          <rect
+            width={sceneWidth}
+            height={horizonY + horizonOverlap}
+            fill={`url(#${skyGradientId})`}
             className={styles.transition}
           />
-          <circle
-            cx="512.16"
-            cy={horizonY}
-            r="41"
-            fill={preset.sunFill}
-            className={styles.transition}
-          />
-        </g>
+        </svg>
+      </div>
 
-        <g
-          className={classNames(styles.celestial, styles.moon)}
-          style={{
-            transform: `translateY(${preset.moonTranslateY}px)`,
-            opacity: preset.moonOpacity,
-          }}
+      <div className={classNames(styles.layer, styles.layerSun)}>
+        <svg
+          className={styles.svg}
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMin slice"
         >
-          <circle
-            cx="512.16"
-            cy="141.99"
-            r="46.38"
-            fill={preset.moonGlow}
-            filter={`url(#${moonFormFilterId})`}
-            className={styles.transition}
-          />
-          <circle
-            cx="512.16"
-            cy="141.99"
-            r="46.38"
-            fill={`url(#${moonGradientId})`}
-            opacity="0.16"
-            className={styles.transition}
-          />
-          <path
-            d="M521.78,181a41.86,41.86,0,1,1,0-83.72c.77,0,1.54,0,2.31.07a46.38,46.38,0,1,0,23.11,75A41.66,41.66,0,0,1,521.78,181Z"
-            fill="#e5ebe4"
-            className={styles.transition}
-          />
-        </g>
-
-        <rect
-          y={horizonY}
-          width="1024"
-          height="326.1"
-          fill={`url(#${seaGradientId})`}
-          className={styles.transition}
-        />
-        <rect
-          y={horizonY}
-          width="1024"
-          height="230.06"
-          fill={`url(#${seaGlareGradientId})`}
-          className={styles.transition}
-          opacity={preset.glareOpacity}
-        />
-        <g mask={`url(#${seaMaskId})`}>
-          <polygon
-            points="756.66 455.87 267.34 456.96 437.68 261.74 583.78 261.74 756.66 455.87"
-            fill={`url(#${seaBeamGradientId})`}
-            filter={`url(#${moonSeaGlareFilterId})`}
-            className={styles.seaBeam}
+          <defs>
+            <radialGradient id={sunCoreGradientId} cx="48%" cy="42%" r="62%" fx="48%" fy="42%">
+              <stop offset="0" stopColor={preset.sunHalo} className={styles.transition} />
+              <stop offset="0.55" stopColor={preset.sunFill} className={styles.transition} />
+              <stop offset="1" stopColor={preset.sunFill} className={styles.transition} />
+            </radialGradient>
+          </defs>
+          <g
+            className={classNames(styles.celestial, styles.sun)}
             style={{
-              opacity: preset.seaBeamOpacity,
-              transform: `scale3d(${preset.seaBeamScale}, ${preset.seaBeamScale}, 1)`,
+              transform: `translateY(${preset.sunTranslateY}px)`,
+              opacity: preset.sunOpacity,
             }}
-          />
-        </g>
-        <rect
-          y={horizonY - 1.5}
-          width="1024"
-          height="3"
-          fill={preset.horizonLine}
-          className={styles.transition}
-          opacity="0.82"
-        />
+          >
+            <image
+              href={sunGlowMask}
+              x={sunGlowX}
+              y={sunGlowY}
+              width={sunGlowSize}
+              height={sunGlowSize}
+              preserveAspectRatio="none"
+              className={classNames(styles.transition, styles.sunGlow)}
+            />
+            <circle
+              cx={sunCenterX}
+              cy={horizonY}
+              r={sunRadius}
+              fill={`url(#${sunCoreGradientId})`}
+              className={styles.transition}
+            />
+          </g>
+        </svg>
+      </div>
 
-        <polygon
-          points="1024 655.09 0 411.24 0 768 1024 768 1024 655.09"
-          fill={preset.hillBack}
-          className={styles.transition}
-        />
-        <polygon
-          points="0 645.45 1024 334.81 1024 768 0 768 0 645.45"
-          fill={`url(#${hillFrontGradientId})`}
-          className={styles.transition}
-        />
-      </svg>
+      <div className={classNames(styles.layer, styles.layerMoon)}>
+        <svg
+          className={styles.svg}
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMin slice"
+        >
+          <defs>
+            <radialGradient id={moonGlowGradientId} cx="50%" cy="50%" r="50%">
+              <stop offset="0" stopColor={preset.moonGlow} stopOpacity="0.68" />
+              <stop offset="0.42" stopColor={preset.moonGlow} stopOpacity="0.34" />
+              <stop offset="0.78" stopColor={preset.moonGlow} stopOpacity="0.1" />
+              <stop offset="1" stopColor={preset.moonGlow} stopOpacity="0" />
+            </radialGradient>
+            <linearGradient
+              id={moonGradientId}
+              x1="400"
+              y1="181.67"
+              x2="576.05"
+              y2="176"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0" stopColor={preset.moonTintStart} className={styles.transition} />
+              <stop offset="1" stopColor={preset.moonTintEnd} className={styles.transition} />
+            </linearGradient>
+          </defs>
+          <g
+            className={classNames(styles.celestial, styles.moon)}
+            style={{
+              transform: `translateY(${preset.moonTranslateY}px)`,
+              opacity: preset.moonOpacity,
+            }}
+          >
+            <circle
+              cx={sunCenterX}
+              cy={moonCenterY}
+              r={moonGlowRadius}
+              fill={`url(#${moonGlowGradientId})`}
+              className={styles.transition}
+            />
+            <circle
+              cx={sunCenterX}
+              cy={moonCenterY}
+              r="46.38"
+              fill={`url(#${moonGradientId})`}
+              opacity="0.16"
+              className={styles.transition}
+            />
+            <path
+              d="M521.78,181a41.86,41.86,0,1,1,0-83.72c.77,0,1.54,0,2.31.07a46.38,46.38,0,1,0,23.11,75A41.66,41.66,0,0,1,521.78,181Z"
+              fill="#e5ebe4"
+              className={styles.transition}
+            />
+          </g>
+        </svg>
+      </div>
+
+      <div className={classNames(styles.layer, styles.layerSea)}>
+        <svg
+          className={styles.svg}
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMin slice"
+        >
+          <defs>
+            <linearGradient
+              id={seaGradientId}
+              x1="512"
+              y1="608.07"
+              x2="512"
+              y2={horizonY}
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0.18" stopColor={preset.seaBottom} className={styles.transition} />
+              <stop offset="0.86" stopColor={preset.seaTop} className={styles.transition} />
+              <stop offset="1" stopColor={preset.seaEdge} className={styles.transition} />
+            </linearGradient>
+            <linearGradient
+              id={seaGlareGradientId}
+              x1="512"
+              y1="520"
+              x2="512"
+              y2={horizonY}
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop
+                offset="0.12"
+                stopColor={preset.glareTop}
+                stopOpacity="0"
+                className={styles.transition}
+              />
+              <stop
+                offset="0.9"
+                stopColor={preset.glareBottom}
+                stopOpacity="0.55"
+                className={styles.transition}
+              />
+              <stop
+                offset="1"
+                stopColor={preset.glareBottom}
+                stopOpacity="1"
+                className={styles.transition}
+              />
+            </linearGradient>
+          </defs>
+          <rect
+            y={horizonY - horizonOverlap}
+            width={sceneWidth}
+            height={326.1 + horizonOverlap}
+            fill={`url(#${seaGradientId})`}
+            className={styles.transition}
+          />
+          <rect
+            y={horizonY - horizonOverlap}
+            width={sceneWidth}
+            height={230.06 + horizonOverlap}
+            fill={`url(#${seaGlareGradientId})`}
+            className={styles.transition}
+            opacity={preset.glareOpacity}
+          />
+          <rect
+            y={horizonY - 1.5}
+            width={sceneWidth}
+            height="3"
+            fill={preset.horizonLine}
+            className={styles.transition}
+            opacity="0.82"
+          />
+        </svg>
+      </div>
+
+      <div className={classNames(styles.layer, styles.layerBeam)}>
+        <svg
+          className={styles.svg}
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMin slice"
+        >
+          {/* Temporary placeholder raster assets. Replace the PNGs without changing scene logic. */}
+          <image
+            className={styles.beam}
+            href={seaBeamLargeMask}
+            x={beamX}
+            y={beamY}
+            width={beamWidth}
+            height={beamHeight}
+            preserveAspectRatio="none"
+            opacity={showLargeBeam ? preset.seaBeamOpacity : 0}
+          />
+          <image
+            className={styles.beam}
+            href={seaBeamSmallMask}
+            x={beamX}
+            y={beamY}
+            width={beamWidth}
+            height={beamHeight}
+            preserveAspectRatio="none"
+            opacity={showSmallBeam ? preset.seaBeamOpacity : 0}
+          />
+        </svg>
+      </div>
+
+      <div className={classNames(styles.layer, styles.layerHills)}>
+        <svg
+          className={styles.svg}
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMin slice"
+        >
+          <defs>
+            <linearGradient
+              id={hillFrontGradientId}
+              x1="512"
+              y1="768"
+              x2="512"
+              y2="334.81"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop
+                offset="0.42"
+                stopColor={preset.hillFrontBottom}
+                className={styles.transition}
+              />
+              <stop offset="1" stopColor={preset.hillFrontTop} className={styles.transition} />
+            </linearGradient>
+          </defs>
+          <polygon
+            points="1024 655.09 0 411.24 0 768 1024 768 1024 655.09"
+            fill={preset.hillBack}
+            className={styles.transition}
+          />
+          <polygon
+            points="0 645.45 1024 334.81 1024 768 0 768 0 645.45"
+            fill={`url(#${hillFrontGradientId})`}
+            className={styles.transition}
+          />
+        </svg>
+      </div>
     </div>
   );
 }

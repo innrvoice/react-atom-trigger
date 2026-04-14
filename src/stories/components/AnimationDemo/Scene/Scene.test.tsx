@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Scene } from './Scene';
 
 describe('Scene', () => {
-  it('namespaces SVG defs per instance to avoid id collisions', () => {
+  it('namespaces per-instance defs and masks to avoid collisions across layered svgs', () => {
     const { container } = render(
       <>
         <Scene mode="day" />
@@ -12,16 +12,21 @@ describe('Scene', () => {
       </>,
     );
 
-    const svgElements = Array.from(container.querySelectorAll('svg'));
-    const skyRects = Array.from(container.querySelectorAll('svg > rect:first-of-type'));
-    const gradientIds = Array.from(container.querySelectorAll('linearGradient')).map(node =>
+    const sceneRoots = Array.from(container.querySelectorAll('[data-mode]'));
+    const gradientIds = Array.from(
+      container.querySelectorAll('linearGradient, radialGradient'),
+    ).map(node => node.getAttribute('id'));
+    const maskIds = Array.from(container.querySelectorAll('mask')).map(node =>
       node.getAttribute('id'),
     );
+    const daySkyRect = sceneRoots[0]?.querySelector('svg rect');
+    const nightSkyRect = sceneRoots[1]?.querySelector('svg rect');
 
-    expect(svgElements).toHaveLength(2);
+    expect(sceneRoots).toHaveLength(2);
     expect(new Set(gradientIds).size).toBe(gradientIds.length);
-    expect(skyRects[0]?.getAttribute('fill')).toMatch(/^url\(#.+-sky\)$/);
-    expect(skyRects[1]?.getAttribute('fill')).toMatch(/^url\(#.+-sky\)$/);
-    expect(skyRects[0]?.getAttribute('fill')).not.toBe(skyRects[1]?.getAttribute('fill'));
+    expect(new Set(maskIds).size).toBe(maskIds.length);
+    expect(daySkyRect?.getAttribute('fill')).toMatch(/^url\(#.+-sky\)$/);
+    expect(nightSkyRect?.getAttribute('fill')).toMatch(/^url\(#.+-sky\)$/);
+    expect(daySkyRect?.getAttribute('fill')).not.toBe(nightSkyRect?.getAttribute('fill'));
   });
 });
