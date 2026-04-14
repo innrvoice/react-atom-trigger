@@ -19,20 +19,19 @@ type ScenePreset = {
   glareTop: string;
   glareBottom: string;
   glareOpacity: number;
-  seaBeamTop: string;
-  seaBeamBottom: string;
+  beamVariant: 'none' | 'large' | 'small';
   seaBeamOpacity: number;
-  // Kept as source-of-truth from the filtered SVG version; runtime no longer scales the beam.
-  seaBeamScale: number;
   hillBack: string;
   hillFrontTop: string;
   hillFrontBottom: string;
   horizonLine: string;
   sunFill: string;
   sunHalo: string;
+  sunGlowOpacity: number;
   sunOpacity: number;
   sunTranslateY: number;
   moonGlow: string;
+  moonGlowOpacity: number;
   moonTintStart: string;
   moonTintEnd: string;
   moonOpacity: number;
@@ -66,19 +65,19 @@ const presets: Record<AnimationMode, ScenePreset> = {
     glareTop: '#d9ffff',
     glareBottom: '#ffffff',
     glareOpacity: 0.22,
-    seaBeamTop: '#fff6d5',
-    seaBeamBottom: '#ffffff',
+    beamVariant: 'none',
     seaBeamOpacity: 0,
-    seaBeamScale: 0.58,
     hillBack: '#0f6f3b',
     hillFrontTop: '#148c3d',
     hillFrontBottom: '#0a5d1a',
     horizonLine: '#e9ffff',
     sunFill: '#fff2b4',
     sunHalo: '#fff8d8',
+    sunGlowOpacity: 0.7,
     sunOpacity: 1,
     sunTranslateY: -140,
     moonGlow: '#99fff2',
+    moonGlowOpacity: 0.5,
     moonTintStart: '#ffffff',
     moonTintEnd: '#6abbd1',
     moonOpacity: 0,
@@ -93,19 +92,19 @@ const presets: Record<AnimationMode, ScenePreset> = {
     glareTop: '#ffd9b5',
     glareBottom: '#fff2cd',
     glareOpacity: 0.08,
-    seaBeamTop: '#ffd58b',
-    seaBeamBottom: '#fff1cf',
+    beamVariant: 'large',
     seaBeamOpacity: 0.88,
-    seaBeamScale: 1,
     hillBack: '#33485c',
     hillFrontTop: '#55655a',
     hillFrontBottom: '#2f3f3a',
     horizonLine: '#ffd6a1',
     sunFill: '#ffd46b',
     sunHalo: '#ffb86a',
+    sunGlowOpacity: 1,
     sunOpacity: 1,
     sunTranslateY: 0,
     moonGlow: '#99fff2',
+    moonGlowOpacity: 0.5,
     moonTintStart: '#ffffff',
     moonTintEnd: '#7abdd4',
     moonOpacity: 0,
@@ -120,19 +119,19 @@ const presets: Record<AnimationMode, ScenePreset> = {
     glareTop: '#58defe',
     glareBottom: '#dfffff',
     glareOpacity: 0.04,
-    seaBeamTop: '#8ef5ff',
-    seaBeamBottom: '#e4ebe4',
+    beamVariant: 'small',
     seaBeamOpacity: 1,
-    seaBeamScale: 0.5,
     hillBack: '#082e48',
     hillFrontTop: '#0d4664',
     hillFrontBottom: '#05273d',
     horizonLine: '#84dfff',
     sunFill: '#ffe286',
     sunHalo: '#ffd8a6',
+    sunGlowOpacity: 1,
     sunOpacity: 0.12,
     sunTranslateY: 120,
     moonGlow: '#8ffbe2',
+    moonGlowOpacity: 0.5,
     moonTintStart: '#ffffff',
     moonTintEnd: '#0b4368',
     moonOpacity: 1,
@@ -147,19 +146,19 @@ const presets: Record<AnimationMode, ScenePreset> = {
     glareTop: '#fff0ce',
     glareBottom: '#fff9e3',
     glareOpacity: 0.1,
-    seaBeamTop: '#ffc56f',
-    seaBeamBottom: '#fff0d1',
+    beamVariant: 'large',
     seaBeamOpacity: 0.9,
-    seaBeamScale: 1.08,
     hillBack: '#416072',
     hillFrontTop: '#638167',
     hillFrontBottom: '#314d41',
     horizonLine: '#ffe3bf',
     sunFill: '#ffd875',
     sunHalo: '#ffc786',
+    sunGlowOpacity: 1,
     sunOpacity: 1,
     sunTranslateY: 0,
     moonGlow: '#8ffbe2',
+    moonGlowOpacity: 0.5,
     moonTintStart: '#ffffff',
     moonTintEnd: '#0b4368',
     moonOpacity: 0.12,
@@ -177,8 +176,9 @@ export function Scene({ mode }: SceneProps) {
   const moonGlowGradientId = `${idPrefix}-moon-glow`;
   const moonGradientId = `${idPrefix}-moon`;
   const seaGlareGradientId = `${idPrefix}-sea-glare`;
-  const showLargeBeam = mode === 'sunset' || mode === 'sunrise';
-  const showSmallBeam = mode === 'night';
+  const isLargeBeam = preset.beamVariant === 'large';
+  const isSmallBeam = preset.beamVariant === 'small';
+  const sunGlowScale = mode === 'day' ? 1 : 1.7;
 
   return (
     <div className={styles.root} data-mode={mode}>
@@ -231,15 +231,18 @@ export function Scene({ mode }: SceneProps) {
               opacity: preset.sunOpacity,
             }}
           >
-            <image
-              href={sunGlowMask}
-              x={sunGlowX}
-              y={sunGlowY}
-              width={sunGlowSize}
-              height={sunGlowSize}
-              preserveAspectRatio="none"
-              className={classNames(styles.transition, styles.sunGlow)}
-            />
+            <g className={styles.sunGlowScale} style={{ transform: `scale(${sunGlowScale})` }}>
+              <image
+                href={sunGlowMask}
+                x={sunGlowX}
+                y={sunGlowY}
+                width={sunGlowSize}
+                height={sunGlowSize}
+                preserveAspectRatio="none"
+                opacity={preset.sunGlowOpacity}
+                className={classNames(styles.transition, styles.sunGlow)}
+              />
+            </g>
             <circle
               cx={sunCenterX}
               cy={horizonY}
@@ -289,6 +292,7 @@ export function Scene({ mode }: SceneProps) {
               cy={moonCenterY}
               r={moonGlowRadius}
               fill={`url(#${moonGlowGradientId})`}
+              opacity={preset.moonGlowOpacity}
               className={styles.transition}
             />
             <circle
@@ -398,7 +402,7 @@ export function Scene({ mode }: SceneProps) {
             width={beamWidth}
             height={beamHeight}
             preserveAspectRatio="none"
-            opacity={showLargeBeam ? preset.seaBeamOpacity : 0}
+            opacity={isLargeBeam ? preset.seaBeamOpacity : 0}
           />
           <image
             className={styles.beam}
@@ -408,7 +412,7 @@ export function Scene({ mode }: SceneProps) {
             width={beamWidth}
             height={beamHeight}
             preserveAspectRatio="none"
-            opacity={showSmallBeam ? preset.seaBeamOpacity : 0}
+            opacity={isSmallBeam ? preset.seaBeamOpacity : 0}
           />
         </svg>
       </div>
