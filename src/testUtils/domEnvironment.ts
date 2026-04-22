@@ -2,7 +2,6 @@ import { cleanup, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { __resetWarningsForTests } from '../AtomTrigger.warnings';
 
-let animationFrameId = 0;
 let activeScrollTop = 0;
 let activeScrollLeft = 0;
 const initialNodeEnv = process.env.NODE_ENV;
@@ -96,14 +95,12 @@ export function setWindowSize(width: number, height: number): void {
 
 export function prepareDomTestRun(): void {
   setActiveScrollPosition(0, 0);
-  animationFrameId = 0;
   setWindowScroll(0, 0);
   setWindowSize(1024, 768);
 
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
     callback(performance.now());
-    animationFrameId += 1;
-    return animationFrameId;
+    return 0;
   });
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
 }

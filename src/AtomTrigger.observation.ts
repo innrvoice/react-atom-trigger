@@ -44,18 +44,6 @@ function createRegistration(
   };
 }
 
-function applyObservationConfig(
-  registration: SentinelRegistration,
-  config: ObservationConfig,
-): void {
-  registration.node = config.node;
-  registration.rootMargin = config.rootMargin;
-  registration.threshold = config.threshold;
-  registration.once = config.once;
-  registration.oncePerDirection = config.oncePerDirection;
-  registration.fireOnInitialVisible = config.fireOnInitialVisible;
-}
-
 function applyObservationCallbacks(
   registration: SentinelRegistration,
   callbacks: ObservationCallbacks,
@@ -69,40 +57,6 @@ function clearObservationBinding(controller: ObservationController): void {
   controller.dispose?.();
   controller.dispose = null;
   controller.binding = null;
-}
-
-function createObservationConfig(input: {
-  node: Element;
-  rootMargin: string;
-  threshold: number;
-  once: boolean;
-  oncePerDirection: boolean;
-  fireOnInitialVisible: boolean;
-}): ObservationConfig {
-  return {
-    node: input.node,
-    rootMargin: input.rootMargin,
-    threshold: input.threshold,
-    once: input.once,
-    oncePerDirection: input.oncePerDirection,
-    fireOnInitialVisible: input.fireOnInitialVisible,
-  };
-}
-
-function bindingsMatch(
-  previousBinding: ObservationBinding | null,
-  nextBinding: ObservationBinding,
-): boolean {
-  return Boolean(
-    previousBinding &&
-    previousBinding.node === nextBinding.node &&
-    previousBinding.target === nextBinding.target &&
-    previousBinding.rootMargin === nextBinding.rootMargin &&
-    previousBinding.threshold === nextBinding.threshold &&
-    previousBinding.once === nextBinding.once &&
-    previousBinding.oncePerDirection === nextBinding.oncePerDirection &&
-    previousBinding.fireOnInitialVisible === nextBinding.fireOnInitialVisible,
-  );
 }
 
 export function createObservationController(
@@ -144,18 +98,18 @@ export function reconcileObservationBinding(
     return;
   }
 
-  const nextConfig = createObservationConfig({
+  const nextConfig: ObservationConfig = {
     node: input.node,
     rootMargin: input.rootMargin,
     threshold: input.threshold,
     once: input.once,
     oncePerDirection: input.oncePerDirection,
     fireOnInitialVisible: input.fireOnInitialVisible,
-  });
+  };
 
   if (input.disabled || !input.target) {
     clearObservationBinding(controller);
-    applyObservationConfig(registration, nextConfig);
+    Object.assign(registration, nextConfig);
     resetObservationState(registration);
     return;
   }
@@ -165,14 +119,24 @@ export function reconcileObservationBinding(
     target: input.target,
   };
 
-  if (bindingsMatch(controller.binding, nextBinding)) {
-    applyObservationConfig(registration, nextConfig);
+  const bindingUnchanged =
+    controller.binding !== null &&
+    controller.binding.node === nextBinding.node &&
+    controller.binding.target === nextBinding.target &&
+    controller.binding.rootMargin === nextBinding.rootMargin &&
+    controller.binding.threshold === nextBinding.threshold &&
+    controller.binding.once === nextBinding.once &&
+    controller.binding.oncePerDirection === nextBinding.oncePerDirection &&
+    controller.binding.fireOnInitialVisible === nextBinding.fireOnInitialVisible;
+
+  if (bindingUnchanged) {
+    Object.assign(registration, nextConfig);
     return;
   }
 
   resetObservationState(registration);
   clearObservationBinding(controller);
-  applyObservationConfig(registration, nextConfig);
+  Object.assign(registration, nextConfig);
   controller.dispose = registerSentinel(input.target, registration);
   controller.binding = nextBinding;
 }
