@@ -99,15 +99,10 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
       return;
     }
 
-    scheduler.rafId = -1;
-    const nextFrameId = window.requestAnimationFrame(() => {
+    scheduler.rafId = window.requestAnimationFrame(() => {
       scheduler.rafId = 0;
       flushSamples();
     });
-
-    if (scheduler.rafId === -1) {
-      scheduler.rafId = nextFrameId;
-    }
   };
 
   const handleScroll = () => {
