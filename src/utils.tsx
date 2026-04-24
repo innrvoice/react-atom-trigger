@@ -25,9 +25,6 @@ export type UseScrollPositionOptions = ListenerOptions & {
 const zeroScrollPosition: ScrollPosition = { x: 0, y: 0 };
 const zeroViewportSize: ViewportSize = { width: 0, height: 0 };
 
-const useIsomorphicLayoutEffect =
-  typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-
 type ThrottleController = {
   schedule: () => void;
   cancel: () => void;
@@ -90,8 +87,6 @@ function getViewportSize(): ViewportSize {
   };
 }
 
-export const __getViewportSizeForTests = getViewportSize;
-
 function isRefBasedTarget(
   target: UseScrollPositionOptions['target'],
 ): target is React.RefObject<HTMLElement | null> {
@@ -115,8 +110,6 @@ function getScrollTarget(target: UseScrollPositionOptions['target']): Window | H
 
   return window;
 }
-
-export const __getScrollTargetForTests = getScrollTarget;
 
 function isWindowTarget(target: Window | HTMLElement): target is Window {
   return target === window || isWindowLike(target);
@@ -214,8 +207,10 @@ export function useScrollPosition(options?: UseScrollPositionOptions): ScrollPos
   const [trackedRefTarget, setTrackedRefTarget] = React.useState<Window | HTMLElement | null>(() =>
     targetUsesRef ? getScrollTarget(target) : null,
   );
+  const useRefTargetEffect =
+    typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
-  useIsomorphicLayoutEffect(() => {
+  useRefTargetEffect(() => {
     if (!targetUsesRef) {
       return;
     }

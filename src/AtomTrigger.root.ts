@@ -1,6 +1,11 @@
 import React from 'react';
 import { isDomElementLike } from './AtomTrigger.runtime';
-import { invalidRootRefWarning, invalidRootWarning, warnOnce } from './AtomTrigger.warnings';
+import {
+  getWarningMessage,
+  invalidRootRefWarning,
+  invalidRootWarning,
+  warnOnce,
+} from './AtomTrigger.warnings';
 
 export type SchedulerTarget = Window | Element;
 
@@ -23,7 +28,9 @@ function resolveExplicitRootTarget(
     return target;
   }
 
-  warnOnce(warningMessage);
+  if (process.env.NODE_ENV === 'development') {
+    warnOnce(getWarningMessage(warningMessage));
+  }
   return null;
 }
 

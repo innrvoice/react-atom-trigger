@@ -36,9 +36,11 @@ export function normalizeRootMargin(
     return '0px';
   }
 
-  warnOnce(
-    `[react-atom-trigger] Invalid rootMargin array ${JSON.stringify(rootMargin)}. Use exactly four finite numbers: [top, right, bottom, left]. Falling back to 0px.`,
-  );
+  if (process.env.NODE_ENV === 'development') {
+    warnOnce(
+      `[react-atom-trigger] Invalid rootMargin array ${JSON.stringify(rootMargin)}. Use exactly four finite numbers: [top, right, bottom, left]. Falling back to 0px.`,
+    );
+  }
 
   return '0px';
 }
@@ -55,9 +57,11 @@ function parseMarginPart(part: string, axisSize: number): number {
 
   const match = value.match(/^([+-]?(?:\d+\.?\d*|\.\d+))(px|%)$/);
   if (!match) {
-    warnOnce(
-      `[react-atom-trigger] Invalid rootMargin token "${value}". Use px, % or 0. Falling back to 0px.`,
-    );
+    if (process.env.NODE_ENV === 'development') {
+      warnOnce(
+        `[react-atom-trigger] Invalid rootMargin token "${value}". Use px, % or 0. Falling back to 0px.`,
+      );
+    }
     return 0;
   }
 
@@ -78,9 +82,11 @@ function resolveRootMargin(
 ): RootMarginValues {
   const parts = rootMargin.trim().split(/\s+/).filter(Boolean);
   if (parts.length > 4) {
-    warnOnce(
-      `[react-atom-trigger] Invalid rootMargin "${rootMargin}". Use 1 to 4 values in IntersectionObserver order. Falling back to 0px.`,
-    );
+    if (process.env.NODE_ENV === 'development') {
+      warnOnce(
+        `[react-atom-trigger] Invalid rootMargin "${rootMargin}". Use 1 to 4 values in IntersectionObserver order. Falling back to 0px.`,
+      );
+    }
 
     return {
       top: 0,
@@ -159,9 +165,11 @@ function clampThreshold(value: number): number {
 
 export function normalizeThreshold(threshold: unknown): number {
   if (Array.isArray(threshold)) {
-    warnOnce(
-      '[react-atom-trigger] `threshold` expects a single number in v2. Using the first finite numeric entry.',
-    );
+    if (process.env.NODE_ENV === 'development') {
+      warnOnce(
+        '[react-atom-trigger] `threshold` expects a single number in v2. Using the first finite numeric entry.',
+      );
+    }
     const firstNumeric = threshold.find(
       (value): value is number => typeof value === 'number' && Number.isFinite(value),
     );
@@ -173,14 +181,18 @@ export function normalizeThreshold(threshold: unknown): number {
   }
 
   if (typeof threshold !== 'number' || !Number.isFinite(threshold)) {
-    warnOnce(
-      '[react-atom-trigger] `threshold` must be a finite number between 0 and 1. Falling back to 0.',
-    );
+    if (process.env.NODE_ENV === 'development') {
+      warnOnce(
+        '[react-atom-trigger] `threshold` must be a finite number between 0 and 1. Falling back to 0.',
+      );
+    }
     return 0;
   }
 
   if (threshold < 0 || threshold > 1) {
-    warnOnce('[react-atom-trigger] `threshold` should be between 0 and 1. Values are clamped.');
+    if (process.env.NODE_ENV === 'development') {
+      warnOnce('[react-atom-trigger] `threshold` should be between 0 and 1. Values are clamped.');
+    }
   }
 
   return clampThreshold(threshold);

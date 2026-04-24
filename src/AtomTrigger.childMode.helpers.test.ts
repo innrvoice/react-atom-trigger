@@ -10,6 +10,7 @@ import {
 } from './AtomTrigger.childMode';
 import {
   fragmentChildWarning,
+  getWarningMessage,
   invalidChildCountWarning,
   invalidChildElementWarning,
   unsupportedChildRefWarning,
@@ -168,7 +169,7 @@ describe('AtomTrigger child mode helpers', () => {
         vi.advanceTimersByTime(16);
       });
 
-      expect(warn).not.toHaveBeenCalledWith(unsupportedChildRefWarning);
+      expect(warn).not.toHaveBeenCalledWith(getWarningMessage(unsupportedChildRefWarning));
     });
   });
 });

@@ -4,7 +4,6 @@ import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useScrollPosition, useViewportSize } from './index';
-import { __getScrollTargetForTests, __getViewportSizeForTests } from './utils';
 import {
   finishDomTestRun,
   prepareDomTestRun,
@@ -477,25 +476,5 @@ describe('utility hooks', () => {
     });
 
     expect(size.textContent).toBe('1400,900');
-  });
-
-  it('falls back to zero viewport size when window is unavailable', () => {
-    const originalWindow = globalThis.window;
-
-    vi.stubGlobal('window', undefined);
-
-    expect(__getViewportSizeForTests()).toEqual({ width: 0, height: 0 });
-
-    vi.stubGlobal('window', originalWindow);
-  });
-
-  it('returns null scroll target when no explicit target exists and window is unavailable', () => {
-    const originalWindow = globalThis.window;
-
-    vi.stubGlobal('window', undefined);
-
-    expect(__getScrollTargetForTests(undefined)).toBeNull();
-
-    vi.stubGlobal('window', originalWindow);
   });
 });

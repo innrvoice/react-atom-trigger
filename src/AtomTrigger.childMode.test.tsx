@@ -10,7 +10,11 @@ import {
   setRect,
   setupChildRootHarness,
 } from './AtomTrigger.testUtils';
-import { nonDomChildRefWarning, unsupportedChildRefWarning } from './AtomTrigger.warnings';
+import {
+  getWarningMessage,
+  nonDomChildRefWarning,
+  unsupportedChildRefWarning,
+} from './AtomTrigger.warnings';
 
 beforeEach(() => {
   prepareDomTestRun();
@@ -100,7 +104,7 @@ describe('AtomTrigger child mode', () => {
     );
 
     expect(view.getByTestId('imperative-handle-child')).toBeTruthy();
-    expect(warn).toHaveBeenCalledWith(nonDomChildRefWarning);
+    expect(warn).toHaveBeenCalledWith(getWarningMessage(nonDomChildRefWarning));
     expect(error).not.toHaveBeenCalled();
   });
 
@@ -166,7 +170,11 @@ describe('AtomTrigger child mode', () => {
       vi.advanceTimersByTime(16);
     });
 
-    expect(warn.mock.calls.some(([message]) => message === unsupportedChildRefWarning)).toBe(false);
+    expect(
+      warn.mock.calls.some(
+        ([message]) => message === getWarningMessage(unsupportedChildRefWarning),
+      ),
+    ).toBe(false);
   });
 
   it('warns and ignores className in child mode', () => {

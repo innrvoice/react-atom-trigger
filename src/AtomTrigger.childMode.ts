@@ -1,10 +1,12 @@
 import React from 'react';
 import {
   fragmentChildWarning,
+  getWarningMessage,
   invalidChildCountWarning,
   invalidChildElementWarning,
   nonDomChildRefWarning,
   unsupportedChildRefWarning,
+  type AtomTriggerWarning,
   warnOnce,
 } from './AtomTrigger.warnings';
 import { isDomElementLike } from './AtomTrigger.runtime';
@@ -68,7 +70,7 @@ export function getInvalidChildWarning(
   usesChildObservation: boolean,
   childCount: number,
   singleChildElement: React.ReactElement | null,
-): string | null {
+): AtomTriggerWarning | null {
   if (!usesChildObservation) {
     return null;
   }
@@ -96,7 +98,7 @@ export function useObservedChildNode({
 }: {
   originalChildRef: React.Ref<unknown> | undefined;
   hasObservedChild: boolean;
-  invalidChildWarning: string | null;
+  invalidChildWarning: AtomTriggerWarning | null;
   shouldWarnAboutMissingDomRef: boolean;
 }): ObservedChildBinding {
   const [childNode, setChildNode] = React.useState<Element | null>(null);
@@ -123,7 +125,9 @@ export function useObservedChildNode({
       }
 
       clearObservedChildNode();
-      warnOnce(nonDomChildRefWarning);
+      if (process.env.NODE_ENV === 'development') {
+        warnOnce(getWarningMessage(nonDomChildRefWarning));
+      }
     },
     [clearObservedChildNode, originalChildRef],
   );
@@ -141,7 +145,9 @@ export function useObservedChildNode({
         return;
       }
 
-      warnOnce(unsupportedChildRefWarning);
+      if (process.env.NODE_ENV === 'development') {
+        warnOnce(getWarningMessage(unsupportedChildRefWarning));
+      }
     }, missingDomRefWarningDelayMs);
 
     return () => {

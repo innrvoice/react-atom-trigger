@@ -8,24 +8,23 @@ type UseSyncExternalStoreHook = <T>(
   getServerSnapshot: GetSnapshot<T>,
 ) => T;
 
-const reactUseSyncExternalStore = (
-  React as typeof React & { useSyncExternalStore?: UseSyncExternalStoreHook }
-).useSyncExternalStore;
-
-const useClientSubscriptionEffect =
-  typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-
 export function useCompatSyncExternalStore<T>(
   subscribe: Subscribe,
   getSnapshot: GetSnapshot<T>,
   getServerSnapshot: GetSnapshot<T>,
 ): T {
+  const reactUseSyncExternalStore = (
+    React as typeof React & { useSyncExternalStore?: UseSyncExternalStoreHook }
+  ).useSyncExternalStore;
+
   if (reactUseSyncExternalStore) {
     return reactUseSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   }
 
   const [snapshot, setSnapshot] = React.useState<T>(() => getServerSnapshot());
   const snapshotRef = React.useRef(snapshot);
+  const useClientSubscriptionEffect =
+    typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
   useClientSubscriptionEffect(() => {
     const updateSnapshot = () => {

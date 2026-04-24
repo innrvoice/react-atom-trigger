@@ -13,6 +13,9 @@ const baseConfig = {
   hash: false,
   platform: 'browser',
   target: 'es2020',
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
   deps: {
     neverBundle: ['react'],
   },
@@ -73,6 +76,7 @@ export default defineConfig([
     dts: false,
     clean: false,
     define: {
+      'process.env.NODE_ENV': '"production"',
       'import.meta': '{}',
     },
     outExtensions: ({ format }) => getOutExtensions(format),
