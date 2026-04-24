@@ -7,8 +7,7 @@ import { Scene } from './Scene';
 import { AnimationControls } from './AnimationControls';
 import { AnimationStatusPanel } from './AnimationStatusPanel';
 import { AnimationTriggerTrack } from './AnimationTriggerTrack';
-import { scrollHintsByMode } from './AnimationDemo.config';
-import { defaultTransitionMap } from './AnimationDemo.config';
+import { defaultTransitionMap, scrollHintsByMode } from './AnimationDemo.config';
 import {
   animationDemoReducer,
   createInitialState,
@@ -20,7 +19,6 @@ import type {
   AnimationMode,
   AnimationTransition,
   AnimationTransitionDirection,
-  AnimationTransitionMap,
   AnimationTriggerId,
 } from './types';
 
@@ -29,7 +27,6 @@ export type AnimationDemoProps = {
   viewportHeight?: number;
   defaultShowTriggers?: boolean;
   scrollBehavior?: ScrollBehavior;
-  transitionMap?: AnimationTransitionMap;
   onModeChange?: (mode: AnimationMode, event: AtomTriggerEvent) => void;
 };
 
@@ -38,7 +35,6 @@ export function AnimationDemo({
   viewportHeight = 720,
   defaultShowTriggers = false,
   scrollBehavior = 'smooth',
-  transitionMap,
   onModeChange,
 }: AnimationDemoProps) {
   const scrollRootRef = React.useRef<HTMLDivElement>(null);
@@ -109,7 +105,7 @@ export function AnimationDemo({
         return;
       }
 
-      const transition = resolveAnimationTransition(transitionMap, triggerId, direction);
+      const transition = resolveAnimationTransition(triggerId, direction);
 
       if (!transition) {
         return;
@@ -117,14 +113,14 @@ export function AnimationDemo({
 
       dispatchTransition(transition, direction, event);
     },
-    [dispatchTransition, transitionMap],
+    [dispatchTransition],
   );
 
   const jumpToTransition = React.useCallback(
     (triggerId: AnimationTriggerId, direction: AnimationTransitionDirection) => {
       const root = scrollRootRef.current;
       const target = triggerAnchorRefs.current[triggerId];
-      const transition = resolveAnimationTransition(transitionMap, triggerId, direction);
+      const transition = resolveAnimationTransition(triggerId, direction);
 
       if (!root || !target || !transition) {
         return;
@@ -137,7 +133,7 @@ export function AnimationDemo({
       scrollRootToPosition(root, getTargetScrollTop(root, target), scrollBehavior);
       dispatchTransition(transition, direction, createJumpEvent(root, target, direction));
     },
-    [dispatchTransition, scrollBehavior, transitionMap],
+    [dispatchTransition, scrollBehavior],
   );
 
   const resetDemo = React.useCallback(() => {

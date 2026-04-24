@@ -1,8 +1,8 @@
 import type {
   AircraftAnimation,
   AnimationMode,
+  AnimationTransition,
   AnimationTransitionDirection,
-  AnimationTransitionMap,
   AnimationTriggerId,
 } from './types';
 
@@ -17,7 +17,7 @@ export type JumpDefinition = {
   direction: AnimationTransitionDirection;
 };
 
-export const defaultTransitionMap: AnimationTransitionMap = {
+export const defaultTransitionMap = {
   top: {
     up: {
       nextMode: 'day',
@@ -40,7 +40,10 @@ export const defaultTransitionMap: AnimationTransitionMap = {
       aircraft: 'plane',
     },
   },
-};
+} satisfies Record<
+  AnimationTriggerId,
+  Partial<Record<AnimationTransitionDirection, AnimationTransition>>
+>;
 
 export const triggerDefinitions: readonly TriggerDefinition[] = [
   {

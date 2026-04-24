@@ -51,14 +51,7 @@ export function ChildModeDemo({
   onEvent,
 }: ChildModeDemoProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const { events, handleEvent } = useDemoEvents();
-  const handleChildEvent = React.useCallback(
-    (event: Parameters<NonNullable<ChildModeDemoProps['onEvent']>>[0]) => {
-      handleEvent(event);
-      onEvent?.(event);
-    },
-    [handleEvent, onEvent],
-  );
+  const { events, handleEvent } = useDemoEvents(onEvent);
 
   return (
     <div style={demoTwoColumnLayoutStyle}>
@@ -85,7 +78,7 @@ export function ChildModeDemo({
             fireOnInitialVisible={fireOnInitialVisible}
             onEnter={onEnter}
             onLeave={onLeave}
-            onEvent={handleChildEvent}
+            onEvent={handleEvent}
           >
             <article style={childCardStyle}>
               <p

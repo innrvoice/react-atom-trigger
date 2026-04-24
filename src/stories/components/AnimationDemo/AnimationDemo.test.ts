@@ -1,6 +1,5 @@
 import type { AtomTriggerEvent } from '../../../index';
 import { describe, expect, it } from 'vitest';
-import { defaultTransitionMap } from './AnimationDemo.config';
 import {
   animationDemoReducer,
   createInitialState,
@@ -10,77 +9,37 @@ import {
 
 describe('AnimationDemo transition resolver', () => {
   it('resolves middle trigger while moving down to sunset with both aircraft', () => {
-    expect(resolveAnimationTransition(defaultTransitionMap, 'middle', 'down')).toEqual({
+    expect(resolveAnimationTransition('middle', 'down')).toEqual({
       nextMode: 'sunset',
       aircraft: 'both',
     });
   });
 
   it('resolves bottom trigger while moving down to night with plane only', () => {
-    expect(resolveAnimationTransition(defaultTransitionMap, 'bottom', 'down')).toEqual({
+    expect(resolveAnimationTransition('bottom', 'down')).toEqual({
       nextMode: 'night',
       aircraft: 'plane',
     });
   });
 
   it('resolves middle trigger while moving up to sunrise with helicopter only', () => {
-    expect(resolveAnimationTransition(defaultTransitionMap, 'middle', 'up')).toEqual({
+    expect(resolveAnimationTransition('middle', 'up')).toEqual({
       nextMode: 'sunrise',
       aircraft: 'helicopter',
     });
   });
 
   it('resolves top trigger while moving up to day with both aircraft', () => {
-    expect(resolveAnimationTransition(defaultTransitionMap, 'top', 'up')).toEqual({
+    expect(resolveAnimationTransition('top', 'up')).toEqual({
       nextMode: 'day',
       aircraft: 'both',
     });
   });
 
   it('ignores unsupported trigger and direction combinations', () => {
-    expect(resolveAnimationTransition(defaultTransitionMap, 'top', 'down')).toBeNull();
-    expect(resolveAnimationTransition(defaultTransitionMap, 'bottom', 'up')).toBeNull();
-    expect(resolveAnimationTransition(defaultTransitionMap, 'middle', 'left')).toBeNull();
-  });
-
-  it('falls back to the default transition map when a custom map is partial', () => {
-    expect(
-      resolveAnimationTransition(
-        {
-          middle: {
-            down: {
-              nextMode: 'night',
-              aircraft: 'plane',
-            },
-          },
-        },
-        'top',
-        'up',
-      ),
-    ).toEqual({
-      nextMode: 'day',
-      aircraft: 'both',
-    });
-  });
-
-  it('prefers the custom transition over the default transition', () => {
-    expect(
-      resolveAnimationTransition(
-        {
-          middle: {
-            down: {
-              nextMode: 'night',
-              aircraft: 'plane',
-            },
-          },
-        },
-        'middle',
-        'down',
-      ),
-    ).toEqual({
-      nextMode: 'night',
-      aircraft: 'plane',
-    });
+    expect(resolveAnimationTransition('top', 'down')).toBeNull();
+    expect(resolveAnimationTransition('bottom', 'up')).toBeNull();
+    expect(resolveAnimationTransition('middle', 'left')).toBeNull();
   });
 });
 
