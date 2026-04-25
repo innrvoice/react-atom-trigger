@@ -47,10 +47,6 @@ export function normalizeRootMargin(
 
 function parseMarginPart(part: string, axisSize: number): number {
   const value = part.trim();
-  if (!value) {
-    return 0;
-  }
-
   if (/^[+-]?0(?:\.0+)?$/.test(value)) {
     return 0;
   }

@@ -135,6 +135,16 @@ describe('AtomTrigger scheduler helpers', () => {
     expect(warn).toHaveBeenCalledWith(getWarningMessage(invalidRootRefWarning));
   });
 
+  it('keeps invalid explicit root warnings out of non-development runtimes', () => {
+    setNodeEnv('production');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const pseudoRoot = { nodeType: 1 } as unknown as HTMLDivElement;
+
+    expect(resolveSchedulerTarget({ kind: 'root', target: pseudoRoot })).toBeNull();
+    expect(resolveSchedulerTarget({ kind: 'rootRef', target: pseudoRoot })).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('returns null when the runtime has no viewport target', () => {
     vi.stubGlobal('window', undefined);
 

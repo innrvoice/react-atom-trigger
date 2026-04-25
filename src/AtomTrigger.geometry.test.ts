@@ -57,6 +57,17 @@ describe('AtomTrigger geometry helpers', () => {
         '[react-atom-trigger] Invalid rootMargin array [1,2,null,4]. Use exactly four finite numbers: [top, right, bottom, left]. Falling back to 0px.',
       );
     });
+
+    it('keeps invalid array warnings out of non-development runtimes', () => {
+      process.env.NODE_ENV = 'production';
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      expect(normalizeRootMargin([1, 2, Number.NaN, 4] as [number, number, number, number])).toBe(
+        '0px',
+      );
+
+      expect(warn).not.toHaveBeenCalled();
+    });
   });
 
   describe('getEffectiveRootBounds', () => {
@@ -92,6 +103,15 @@ describe('AtomTrigger geometry helpers', () => {
       expect(warn).toHaveBeenCalledWith(
         '[react-atom-trigger] Invalid rootMargin "1px 2px 3px 4px 5px". Use 1 to 4 values in IntersectionObserver order. Falling back to 0px.',
       );
+    });
+
+    it('keeps invalid rootMargin token warnings out of non-development runtimes', () => {
+      process.env.NODE_ENV = 'production';
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      expect(getEffectiveRootBounds(base, '1px auto')).toEqual(new DOMRect(10, 19, 200, 101));
+      expect(getEffectiveRootBounds(base, '1px 2px 3px 4px 5px')).toEqual(base);
+      expect(warn).not.toHaveBeenCalled();
     });
   });
 
@@ -161,6 +181,17 @@ describe('AtomTrigger geometry helpers', () => {
       expect(warn).toHaveBeenCalledWith(
         '[react-atom-trigger] `threshold` should be between 0 and 1. Values are clamped.',
       );
+    });
+
+    it('keeps invalid threshold warnings out of non-development runtimes', () => {
+      process.env.NODE_ENV = 'production';
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      expect(normalizeThreshold([Number.NaN, 0.25])).toBe(0.25);
+      expect(normalizeThreshold([Number.NaN])).toBe(0);
+      expect(normalizeThreshold('nope')).toBe(0);
+      expect(normalizeThreshold(1.5)).toBe(1);
+      expect(warn).not.toHaveBeenCalled();
     });
   });
 
