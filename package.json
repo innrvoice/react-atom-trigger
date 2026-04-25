@@ -98,6 +98,7 @@
     "overrides": {
       "@actions/github>undici": "7.24.7",
       "@actions/http-client>undici": "7.24.7",
+      "postcss": "8.5.10",
       "picomatch": "^4.0.4"
     }
   }
