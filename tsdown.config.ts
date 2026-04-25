@@ -19,11 +19,6 @@ const baseConfig = {
   deps: {
     neverBundle: ['react'],
   },
-  plugins: codecovRollupPlugin({
-    enableBundleAnalysis,
-    bundleName: 'react-atom-trigger',
-    uploadToken: codecovToken,
-  }),
 } satisfies UserConfig;
 
 function getOutExtensions(format: string): { js: string; dts?: string } {
@@ -67,6 +62,11 @@ export default defineConfig([
     format: 'esm',
     dts: true,
     clean: true,
+    plugins: codecovRollupPlugin({
+      enableBundleAnalysis,
+      bundleName: 'react-atom-trigger',
+      uploadToken: codecovToken,
+    }),
     outExtensions: ({ format }) => getOutExtensions(format),
     outputOptions: (options, format) => withReactGlobals(options, format),
   },
