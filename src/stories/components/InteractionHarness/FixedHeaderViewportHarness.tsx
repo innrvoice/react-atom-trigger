@@ -1,7 +1,7 @@
 import React from 'react';
 import { AtomTrigger } from '../../../index';
 import type { AtomTriggerEvent, AtomTriggerProps } from '../../../index';
-import { addHarnessEvent } from './shared';
+import { addHarnessEvent, markHarnessReady, mockElementRect } from './shared';
 
 type FixedHeaderViewportHarnessProps = Pick<
   AtomTriggerProps,
@@ -38,16 +38,11 @@ export function FixedHeaderViewportHarness({
       configurable: true,
       value: 200,
     });
-    Object.defineProperty(sentinel, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(40, 260 - scrollTopRef.current, 120, 2),
-    });
+    mockElementRect(sentinel, () => new DOMRect(40, 260 - scrollTopRef.current, 120, 2));
 
     scrollTopRef.current = 0;
     setCurrentScrollTop(0);
-    const readyId = window.requestAnimationFrame(() => {
-      setHarnessReady(true);
-    });
+    const readyId = markHarnessReady(setHarnessReady);
 
     return () => {
       window.cancelAnimationFrame(readyId);

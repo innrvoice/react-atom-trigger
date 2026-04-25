@@ -130,6 +130,6 @@ export function sampleRegistration(
   }
 
   if (isRegistrationComplete(registration)) {
-    registration.dispose?.();
+    registration.unsubscribe?.();
   }
 }

@@ -12,7 +12,7 @@ export type SentinelRegistration = {
   once: boolean;
   oncePerDirection: boolean;
   fireOnInitialVisible: boolean;
-  dispose?: () => void;
+  unsubscribe?: () => void;
   onEnter?: (event: AtomTriggerEvent) => void;
   onLeave?: (event: AtomTriggerEvent) => void;
   onEvent?: (event: AtomTriggerEvent) => void;
@@ -190,7 +190,7 @@ export function registerSentinel(
     scheduler.registrations.delete(registration);
     scheduler.resizeObserver?.unobserve(observedNode);
     scheduler.intersectionObserver?.unobserve(observedNode);
-    registration.dispose = undefined;
+    registration.unsubscribe = undefined;
 
     if (scheduler.registrations.size === 0) {
       scheduler.cleanup();
@@ -198,7 +198,7 @@ export function registerSentinel(
     }
   };
 
-  registration.dispose = dispose;
+  registration.unsubscribe = dispose;
 
   return dispose;
 }

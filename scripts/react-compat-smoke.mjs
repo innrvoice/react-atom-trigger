@@ -47,7 +47,8 @@ globalThis.IntersectionObserver = class {
   disconnect() {}
 };
 
-const { AtomTrigger, useScrollPosition, useViewportSize } = await import('../lib/index.js');
+const packageImport = process.env.REACT_ATOM_TRIGGER_IMPORT ?? '../lib/index.js';
+const { AtomTrigger, useScrollPosition, useViewportSize } = await import(packageImport);
 
 async function createRenderer(container) {
   if (ReactDOMClient && typeof ReactDOMClient.createRoot === 'function') {

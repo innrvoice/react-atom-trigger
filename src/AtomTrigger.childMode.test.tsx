@@ -10,11 +10,7 @@ import {
   setRect,
   setupChildRootHarness,
 } from './AtomTrigger.testUtils';
-import {
-  getWarningMessage,
-  nonDomChildRefWarning,
-  unsupportedChildRefWarning,
-} from './AtomTrigger.warnings';
+import { warningMessages } from './AtomTrigger.warnings';
 
 beforeEach(() => {
   prepareDomTestRun();
@@ -104,7 +100,7 @@ describe('AtomTrigger child mode', () => {
     );
 
     expect(view.getByTestId('imperative-handle-child')).toBeTruthy();
-    expect(warn).toHaveBeenCalledWith(getWarningMessage(nonDomChildRefWarning));
+    expect(warn).toHaveBeenCalledWith(warningMessages.nonDomChildRef);
     expect(error).not.toHaveBeenCalled();
   });
 
@@ -171,9 +167,7 @@ describe('AtomTrigger child mode', () => {
     });
 
     expect(
-      warn.mock.calls.some(
-        ([message]) => message === getWarningMessage(unsupportedChildRefWarning),
-      ),
+      warn.mock.calls.some(([message]) => message === warningMessages.unsupportedChildRef),
     ).toBe(false);
   });
 

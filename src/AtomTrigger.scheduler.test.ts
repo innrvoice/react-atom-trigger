@@ -4,11 +4,7 @@ import { registerSentinel, type SentinelRegistration } from './AtomTrigger.sched
 import { resolveSchedulerTarget } from './AtomTrigger.root';
 import { resetObservationState } from './AtomTrigger.sampling';
 import { finishDomTestRun, prepareDomTestRun, setNodeEnv, setRect } from './AtomTrigger.testUtils';
-import {
-  getWarningMessage,
-  invalidRootRefWarning,
-  invalidRootWarning,
-} from './AtomTrigger.warnings';
+import { warningMessages } from './AtomTrigger.warnings';
 
 function createRegistration(
   node: Element,
@@ -131,8 +127,8 @@ describe('AtomTrigger scheduler helpers', () => {
 
     expect(resolveSchedulerTarget({ kind: 'root', target: pseudoRoot })).toBeNull();
     expect(resolveSchedulerTarget({ kind: 'rootRef', target: pseudoRoot })).toBeNull();
-    expect(warn).toHaveBeenCalledWith(getWarningMessage(invalidRootWarning));
-    expect(warn).toHaveBeenCalledWith(getWarningMessage(invalidRootRefWarning));
+    expect(warn).toHaveBeenCalledWith(warningMessages.invalidRoot);
+    expect(warn).toHaveBeenCalledWith(warningMessages.invalidRootRef);
   });
 
   it('keeps invalid explicit root warnings out of non-development runtimes', () => {
@@ -195,7 +191,7 @@ describe('AtomTrigger scheduler helpers', () => {
     expect(resizeObservers[0].disconnect).toHaveBeenCalledTimes(1);
     expect(intersectionObservers[0].unobserve).toHaveBeenCalledWith(node);
     expect(intersectionObservers[0].disconnect).toHaveBeenCalledTimes(1);
-    expect(registration.dispose).toBeUndefined();
+    expect(registration.unsubscribe).toBeUndefined();
   });
 
   it('uses viewport observers without trying to observe the window target directly', () => {

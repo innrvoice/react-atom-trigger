@@ -23,6 +23,41 @@ export function addHarnessEvent(
   forwardEvent?.(event);
 }
 
+export function mockElementRect(element: Element, readRect: () => DOMRectReadOnly): void {
+  Object.defineProperty(element, 'getBoundingClientRect', {
+    configurable: true,
+    value: readRect,
+  });
+}
+
+export function dispatchElementScroll(element: Element): void {
+  element.dispatchEvent(
+    new element.ownerDocument.defaultView!.Event('scroll', {
+      bubbles: true,
+    }),
+  );
+}
+
+export function markHarnessReady(
+  setHarnessReady: React.Dispatch<React.SetStateAction<boolean>>,
+): number {
+  return window.requestAnimationFrame(() => {
+    setHarnessReady(true);
+  });
+}
+
+export function runFrameSequence(callbacks: readonly (() => void)[]): void {
+  const [callback, ...remainingCallbacks] = callbacks;
+  if (!callback) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    callback();
+    runFrameSequence(remainingCallbacks);
+  });
+}
+
 export function CounterPanel({
   title,
   testIdPrefix,
