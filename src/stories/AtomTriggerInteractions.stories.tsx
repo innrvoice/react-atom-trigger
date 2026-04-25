@@ -2,11 +2,11 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
 import {
-  DeterministicInteractionHarness,
   FixedHeaderViewportHarness,
+  InteractionHarness,
   MultiSentinelInteractionHarness,
   type InteractionHarnessProps,
-} from './components/DeterministicInteractionHarness';
+} from './components/InteractionHarness';
 import { StorySentinelStyles } from './components/StoryStyles';
 import { atomTriggerActionArgs, atomTriggerArgTypes } from './storybookArgs';
 
@@ -50,15 +50,15 @@ export const InteractionOnceOnly: Story = {
   args: {
     once: true,
   },
-  render: args => <DeterministicInteractionHarness {...args} />,
+  render: args => <InteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const triggerEnter = canvas.getByRole('button', { name: /trigger enter/i });
     const triggerLeave = canvas.getByRole('button', { name: /trigger leave/i });
     const reset = canvas.getByRole('button', { name: /reset/i });
-    const observerReady = canvas.getByTestId('deterministic-observer-ready');
-    const enteredCount = canvas.getByTestId('deterministic-entered');
-    const leftCount = canvas.getByTestId('deterministic-left');
-    const totalEvents = canvas.getByTestId('deterministic-total');
+    const observerReady = canvas.getByTestId('observer-ready');
+    const enteredCount = canvas.getByTestId('entered');
+    const leftCount = canvas.getByTestId('left');
+    const totalEvents = canvas.getByTestId('total');
 
     await step('Wait for observer setup', async () => {
       await waitFor(() => {
@@ -99,14 +99,14 @@ export const InteractionOncePerDirection: Story = {
   args: {
     oncePerDirection: true,
   },
-  render: args => <DeterministicInteractionHarness {...args} />,
+  render: args => <InteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const triggerEnter = canvas.getByRole('button', { name: /trigger enter/i });
     const triggerLeave = canvas.getByRole('button', { name: /trigger leave/i });
-    const observerReady = canvas.getByTestId('deterministic-observer-ready');
-    const enteredCount = canvas.getByTestId('deterministic-entered');
-    const leftCount = canvas.getByTestId('deterministic-left');
-    const totalEvents = canvas.getByTestId('deterministic-total');
+    const observerReady = canvas.getByTestId('observer-ready');
+    const enteredCount = canvas.getByTestId('entered');
+    const leftCount = canvas.getByTestId('left');
+    const totalEvents = canvas.getByTestId('total');
 
     await step('Wait for observer setup', async () => {
       await waitFor(() => {
@@ -147,14 +147,14 @@ export const InitialVisibleOnLoad: Story = {
     fireOnInitialVisible: true,
     initialVerticalScrollTop: 120,
   },
-  render: args => <DeterministicInteractionHarness {...args} />,
+  render: args => <InteractionHarness {...args} />,
   play: async ({ canvas, step }) => {
-    const observerReady = canvas.getByTestId('deterministic-observer-ready');
-    const enteredCount = canvas.getByTestId('deterministic-entered');
-    const leftCount = canvas.getByTestId('deterministic-left');
-    const totalEvents = canvas.getByTestId('deterministic-total');
-    const latestType = canvas.getByTestId('deterministic-latest-type');
-    const latestInitial = canvas.getByTestId('deterministic-latest-initial');
+    const observerReady = canvas.getByTestId('observer-ready');
+    const enteredCount = canvas.getByTestId('entered');
+    const leftCount = canvas.getByTestId('left');
+    const totalEvents = canvas.getByTestId('total');
+    const latestType = canvas.getByTestId('latest-type');
+    const latestInitial = canvas.getByTestId('latest-initial');
 
     await step('Fire enter immediately when the trigger starts visible', async () => {
       await waitFor(() => {
@@ -170,15 +170,15 @@ export const InitialVisibleOnLoad: Story = {
 };
 
 export const VerticalScrollBehavior: Story = {
-  render: args => <DeterministicInteractionHarness {...args} />,
+  render: args => <InteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const runVertical = canvas.getByRole('button', { name: /run vertical sequence/i });
-    const observerReady = canvas.getByTestId('deterministic-observer-ready');
-    const enteredCount = canvas.getByTestId('deterministic-entered');
-    const leftCount = canvas.getByTestId('deterministic-left');
-    const totalEvents = canvas.getByTestId('deterministic-total');
-    const latestMovement = canvas.getByTestId('deterministic-latest-movement');
-    const latestPosition = canvas.getByTestId('deterministic-latest-position');
+    const observerReady = canvas.getByTestId('observer-ready');
+    const enteredCount = canvas.getByTestId('entered');
+    const leftCount = canvas.getByTestId('left');
+    const totalEvents = canvas.getByTestId('total');
+    const latestMovement = canvas.getByTestId('latest-movement');
+    const latestPosition = canvas.getByTestId('latest-position');
 
     await step('Wait for observer setup', async () => {
       await waitFor(() => {
@@ -186,7 +186,7 @@ export const VerticalScrollBehavior: Story = {
       });
     });
 
-    await step('Run deterministic vertical transition sequence', async () => {
+    await step('Run controlled vertical transition sequence', async () => {
       await userEvent.click(runVertical);
       await waitFor(() => {
         expect(enteredCount).toHaveTextContent('1');
@@ -200,15 +200,15 @@ export const VerticalScrollBehavior: Story = {
 };
 
 export const HorizontalScrollBehavior: Story = {
-  render: args => <DeterministicInteractionHarness {...args} />,
+  render: args => <InteractionHarness {...args} />,
   play: async ({ canvas, userEvent, step }) => {
     const runHorizontal = canvas.getByRole('button', { name: /run horizontal sequence/i });
-    const observerReady = canvas.getByTestId('deterministic-observer-ready');
-    const enteredCount = canvas.getByTestId('deterministic-entered');
-    const leftCount = canvas.getByTestId('deterministic-left');
-    const totalEvents = canvas.getByTestId('deterministic-total');
-    const latestMovement = canvas.getByTestId('deterministic-latest-movement');
-    const latestPosition = canvas.getByTestId('deterministic-latest-position');
+    const observerReady = canvas.getByTestId('observer-ready');
+    const enteredCount = canvas.getByTestId('entered');
+    const leftCount = canvas.getByTestId('left');
+    const totalEvents = canvas.getByTestId('total');
+    const latestMovement = canvas.getByTestId('latest-movement');
+    const latestPosition = canvas.getByTestId('latest-position');
 
     await step('Wait for observer setup', async () => {
       await waitFor(() => {
@@ -216,7 +216,7 @@ export const HorizontalScrollBehavior: Story = {
       });
     });
 
-    await step('Run deterministic horizontal transition sequence', async () => {
+    await step('Run controlled horizontal transition sequence', async () => {
       await userEvent.click(runHorizontal);
       await waitFor(() => {
         expect(enteredCount).toHaveTextContent('1');

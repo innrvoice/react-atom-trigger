@@ -22,7 +22,7 @@ export function AtomTriggerDemo({
   onEvent,
 }: DemoProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const { events, handleEvent } = useDemoEvents();
+  const { events, handleEvent } = useDemoEvents(onEvent);
 
   React.useLayoutEffect(() => {
     const container = containerRef.current;
@@ -32,14 +32,6 @@ export function AtomTriggerDemo({
 
     container.scrollTop = initialScrollTop;
   }, [initialScrollTop]);
-
-  const handleDemoEvent = React.useCallback(
-    (event: Parameters<NonNullable<DemoProps['onEvent']>>[0]) => {
-      handleEvent(event);
-      onEvent?.(event);
-    },
-    [handleEvent, onEvent],
-  );
 
   return (
     <div style={demoTwoColumnLayoutStyle}>
@@ -68,7 +60,7 @@ export function AtomTriggerDemo({
             fireOnInitialVisible={fireOnInitialVisible}
             onEnter={onEnter}
             onLeave={onLeave}
-            onEvent={handleDemoEvent}
+            onEvent={handleEvent}
           />
 
           <div style={{ height: 500, paddingTop: 8 }}>
@@ -101,14 +93,7 @@ export function FixedHeaderOffsetDemo({
   onEvent,
 }: FixedHeaderDemoProps) {
   const viewportRef = React.useRef<HTMLDivElement>(null);
-  const { events, handleEvent } = useDemoEvents();
-  const handleFixedHeaderEvent = React.useCallback(
-    (event: Parameters<NonNullable<FixedHeaderDemoProps['onEvent']>>[0]) => {
-      handleEvent(event);
-      onEvent?.(event);
-    },
-    [handleEvent, onEvent],
-  );
+  const { events, handleEvent } = useDemoEvents(onEvent);
 
   return (
     <div
@@ -170,7 +155,7 @@ export function FixedHeaderOffsetDemo({
             oncePerDirection={oncePerDirection}
             onEnter={onEnter}
             onLeave={onLeave}
-            onEvent={handleFixedHeaderEvent}
+            onEvent={handleEvent}
           />
 
           <div style={{ height: 1200, paddingTop: 8 }}>
@@ -197,14 +182,7 @@ export function FixedHeaderOffsetViewportDemo({
   onLeave,
   onEvent,
 }: FixedHeaderDemoProps) {
-  const { events, handleEvent } = useDemoEvents();
-  const handleViewportEvent = React.useCallback(
-    (event: Parameters<NonNullable<FixedHeaderDemoProps['onEvent']>>[0]) => {
-      handleEvent(event);
-      onEvent?.(event);
-    },
-    [handleEvent, onEvent],
-  );
+  const { events, handleEvent } = useDemoEvents(onEvent);
 
   return (
     <div style={{ display: 'flex', width: '100%', padding: 20, fontFamily: 'sans-serif' }}>
@@ -249,7 +227,7 @@ export function FixedHeaderOffsetViewportDemo({
             oncePerDirection={oncePerDirection}
             onEnter={onEnter}
             onLeave={onLeave}
-            onEvent={handleViewportEvent}
+            onEvent={handleEvent}
           />
 
           <div style={{ height: 1600, paddingTop: 8 }}>
@@ -282,14 +260,7 @@ export function HorizontalScrollDemo({
   onEvent,
 }: HorizontalScrollDemoProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const { events, handleEvent } = useDemoEvents();
-  const handleHorizontalEvent = React.useCallback(
-    (event: Parameters<NonNullable<HorizontalScrollDemoProps['onEvent']>>[0]) => {
-      handleEvent(event);
-      onEvent?.(event);
-    },
-    [handleEvent, onEvent],
-  );
+  const { events, handleEvent } = useDemoEvents(onEvent);
 
   return (
     <div
@@ -341,7 +312,7 @@ export function HorizontalScrollDemo({
               oncePerDirection={oncePerDirection}
               onEnter={onEnter}
               onLeave={onLeave}
-              onEvent={handleHorizontalEvent}
+              onEvent={handleEvent}
             />
 
             <div

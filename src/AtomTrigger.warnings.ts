@@ -1,30 +1,55 @@
 const devWarnings = new Set<string>();
-export const invalidChildCountWarning =
-  '[react-atom-trigger] Child mode expects exactly one top-level React element. Observation is disabled for this render.';
+export type AtomTriggerWarning =
+  | 'invalidChildCount'
+  | 'invalidChildElement'
+  | 'unsupportedChildRef'
+  | 'fragmentChild'
+  | 'nonDomChildRef'
+  | 'childModeClassName'
+  | 'conflictingOnceModes'
+  | 'invalidRoot'
+  | 'invalidRootRef';
 
-export const invalidChildElementWarning =
-  '[react-atom-trigger] Child mode expects a React element child. Observation is disabled for this render.';
+export const invalidChildCountWarning = 'invalidChildCount' satisfies AtomTriggerWarning;
 
-export const unsupportedChildRefWarning =
-  '[react-atom-trigger] Child mode expects a DOM element or a component that forwards its ref to a DOM element. Observation is disabled for this render.';
+export const invalidChildElementWarning = 'invalidChildElement' satisfies AtomTriggerWarning;
 
-export const fragmentChildWarning =
-  '[react-atom-trigger] Child mode does not support React.Fragment. Wrap the content in a single DOM element. Observation is disabled for this render.';
+export const unsupportedChildRefWarning = 'unsupportedChildRef' satisfies AtomTriggerWarning;
 
-export const nonDomChildRefWarning =
-  '[react-atom-trigger] Child mode requires the child ref to resolve to a DOM element. Observation is disabled for this render.';
+export const fragmentChildWarning = 'fragmentChild' satisfies AtomTriggerWarning;
 
-export const childModeClassNameWarning =
-  '[react-atom-trigger] `className` only applies to the internal sentinel. In child mode, style the child element directly.';
+export const nonDomChildRefWarning = 'nonDomChildRef' satisfies AtomTriggerWarning;
 
-export const conflictingOnceModesWarning =
-  '[react-atom-trigger] `once` and `oncePerDirection` were both provided. `once` takes precedence.';
+export const childModeClassNameWarning = 'childModeClassName' satisfies AtomTriggerWarning;
 
-export const invalidRootWarning =
-  '[react-atom-trigger] `root` must be a real DOM element when provided. Observation is paused until it is.';
+export const conflictingOnceModesWarning = 'conflictingOnceModes' satisfies AtomTriggerWarning;
 
-export const invalidRootRefWarning =
-  '[react-atom-trigger] `rootRef.current` must resolve to a real DOM element. Observation is paused until it does.';
+export const invalidRootWarning = 'invalidRoot' satisfies AtomTriggerWarning;
+
+export const invalidRootRefWarning = 'invalidRootRef' satisfies AtomTriggerWarning;
+
+export function getWarningMessage(warning: AtomTriggerWarning): string {
+  switch (warning) {
+    case 'invalidChildCount':
+      return '[react-atom-trigger] Child mode expects exactly one top-level React element. Observation is disabled for this render.';
+    case 'invalidChildElement':
+      return '[react-atom-trigger] Child mode expects a React element child. Observation is disabled for this render.';
+    case 'unsupportedChildRef':
+      return '[react-atom-trigger] Child mode expects a DOM element or a component that forwards its ref to a DOM element. Observation is disabled for this render.';
+    case 'fragmentChild':
+      return '[react-atom-trigger] Child mode does not support React.Fragment. Wrap the content in a single DOM element. Observation is disabled for this render.';
+    case 'nonDomChildRef':
+      return '[react-atom-trigger] Child mode requires the child ref to resolve to a DOM element. Observation is disabled for this render.';
+    case 'childModeClassName':
+      return '[react-atom-trigger] `className` only applies to the internal sentinel. In child mode, style the child element directly.';
+    case 'conflictingOnceModes':
+      return '[react-atom-trigger] `once` and `oncePerDirection` were both provided. `once` takes precedence.';
+    case 'invalidRoot':
+      return '[react-atom-trigger] `root` must be a real DOM element when provided. Observation is paused until it is.';
+    case 'invalidRootRef':
+      return '[react-atom-trigger] `rootRef.current` must resolve to a real DOM element. Observation is paused until it does.';
+  }
+}
 
 function getKnownNodeEnv(): 'development' | 'production' | null {
   if (typeof process === 'undefined' || !process.env) {
@@ -48,7 +73,7 @@ export function __isDevelopmentRuntimeForTests(overrides?: {
 }
 
 export function warnOnce(message: string): void {
-  if (!__isDevelopmentRuntimeForTests()) {
+  if (getKnownNodeEnv() !== 'development') {
     return;
   }
 

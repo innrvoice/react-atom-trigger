@@ -9,6 +9,5 @@ export type {
   AnimationMode,
   AnimationTransition,
   AnimationTransitionDirection,
-  AnimationTransitionMap,
   AnimationTriggerId,
 } from './types';

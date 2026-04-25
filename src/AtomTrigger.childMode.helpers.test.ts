@@ -10,10 +10,13 @@ import {
 } from './AtomTrigger.childMode';
 import {
   fragmentChildWarning,
+  getWarningMessage,
   invalidChildCountWarning,
   invalidChildElementWarning,
   unsupportedChildRefWarning,
 } from './AtomTrigger.warnings';
+
+const initialNodeEnv = process.env.NODE_ENV;
 
 function stubProcess(processValue: Partial<Pick<NodeJS.Process, 'env'>>): void {
   vi.stubGlobal('process', processValue as unknown as NodeJS.Process);
@@ -46,7 +49,13 @@ function createBrokenChildElement(
 describe('AtomTrigger child mode helpers', () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    if (initialNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = initialNodeEnv;
+    }
   });
 
   describe('assignRef', () => {
@@ -139,6 +148,31 @@ describe('AtomTrigger child mode helpers', () => {
   });
 
   describe('useObservedChildNode', () => {
+    it('keeps non-DOM child ref warnings out of non-development runtimes', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      let attachObservedChildRef: ((value: unknown) => void) | undefined;
+      process.env.NODE_ENV = 'production';
+
+      function Harness() {
+        const binding = useObservedChildNode({
+          originalChildRef: undefined,
+          hasObservedChild: true,
+          invalidChildWarning: null,
+          shouldWarnAboutMissingDomRef: true,
+        });
+        attachObservedChildRef = binding.attachObservedChildRef;
+        return null;
+      }
+
+      render(React.createElement(Harness));
+
+      act(() => {
+        attachObservedChildRef?.({ current: document.createElement('div') });
+      });
+
+      expect(warn).not.toHaveBeenCalled();
+    });
+
     it('keeps the delayed missing-dom warning silent when a DOM ref appears before the timer callback runs', () => {
       vi.useFakeTimers();
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -168,7 +202,63 @@ describe('AtomTrigger child mode helpers', () => {
         vi.advanceTimersByTime(16);
       });
 
-      expect(warn).not.toHaveBeenCalledWith(unsupportedChildRefWarning);
+      expect(warn).not.toHaveBeenCalledWith(getWarningMessage(unsupportedChildRefWarning));
+    });
+
+    it('keeps the observed child node stable when the same DOM ref is attached again', () => {
+      const node = document.createElement('div');
+      let attachObservedChildRef: ((value: unknown) => void) | undefined;
+      let observedChildNode: Element | null = null;
+
+      function Harness() {
+        const binding = useObservedChildNode({
+          originalChildRef: undefined,
+          hasObservedChild: true,
+          invalidChildWarning: null,
+          shouldWarnAboutMissingDomRef: false,
+        });
+        attachObservedChildRef = binding.attachObservedChildRef;
+        observedChildNode = binding.childNode;
+        return null;
+      }
+
+      render(React.createElement(Harness));
+
+      act(() => {
+        attachObservedChildRef?.(node);
+      });
+
+      expect(observedChildNode).toBe(node);
+
+      act(() => {
+        attachObservedChildRef?.(node);
+      });
+
+      expect(observedChildNode).toBe(node);
+    });
+
+    it('keeps delayed missing-dom warnings out of non-development runtimes', () => {
+      vi.useFakeTimers();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      process.env.NODE_ENV = 'production';
+
+      function Harness() {
+        useObservedChildNode({
+          originalChildRef: undefined,
+          hasObservedChild: true,
+          invalidChildWarning: null,
+          shouldWarnAboutMissingDomRef: true,
+        });
+        return null;
+      }
+
+      render(React.createElement(Harness));
+
+      act(() => {
+        vi.advanceTimersByTime(16);
+      });
+
+      expect(warn).not.toHaveBeenCalledWith(getWarningMessage(unsupportedChildRefWarning));
     });
   });
 });

@@ -10,7 +10,3 @@ export type AnimationTransition = {
   nextMode: AnimationMode;
   aircraft: AircraftAnimation;
 };
-
-export type AnimationTransitionMap = Partial<
-  Record<AnimationTriggerId, Partial<Record<AnimationTransitionDirection, AnimationTransition>>>
->;

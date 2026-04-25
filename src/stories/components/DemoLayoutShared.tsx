@@ -28,16 +28,19 @@ export const demoScrollContainerStyle: React.CSSProperties = {
   background: '#fff',
 };
 
-export function useDemoEvents() {
+export function useDemoEvents(forwardEvent?: AtomTriggerProps['onEvent']) {
   const [events, setEvents] = React.useState<AtomTriggerEvent[]>([]);
 
-  const handleEvent = React.useCallback((event: AtomTriggerEvent) => {
-    setEvents(prev => [event, ...prev].slice(0, 12));
-  }, []);
+  const handleEvent = React.useCallback(
+    (event: AtomTriggerEvent) => {
+      setEvents(prev => [event, ...prev].slice(0, 12));
+      forwardEvent?.(event);
+    },
+    [forwardEvent],
+  );
 
   return {
     events,
-    latestEvent: events[0],
     handleEvent,
   };
 }

@@ -44,15 +44,6 @@ function createRegistration(
   };
 }
 
-function applyObservationCallbacks(
-  registration: SentinelRegistration,
-  callbacks: ObservationCallbacks,
-): void {
-  registration.onEnter = callbacks.onEnter;
-  registration.onLeave = callbacks.onLeave;
-  registration.onEvent = callbacks.onEvent;
-}
-
 function clearObservationBinding(controller: ObservationController): void {
   controller.dispose?.();
   controller.dispose = null;
@@ -74,7 +65,9 @@ export function updateObservationCallbacks(
   controller: ObservationController,
   callbacks: ObservationCallbacks,
 ): void {
-  applyObservationCallbacks(controller.registration, callbacks);
+  controller.registration.onEnter = callbacks.onEnter;
+  controller.registration.onLeave = callbacks.onLeave;
+  controller.registration.onEvent = callbacks.onEvent;
 }
 
 export function reconcileObservationBinding(

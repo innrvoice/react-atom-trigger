@@ -5,7 +5,6 @@ import type {
   AnimationMode,
   AnimationTransition,
   AnimationTransitionDirection,
-  AnimationTransitionMap,
   AnimationTriggerId,
 } from './types';
 
@@ -81,7 +80,6 @@ export function getTransitionDirectionFromEvent(
 }
 
 export function resolveAnimationTransition(
-  transitionMap: AnimationTransitionMap | undefined,
   triggerId: AnimationTriggerId,
   direction: MovementDirection | AnimationTransitionDirection,
 ): AnimationTransition | null {
@@ -91,9 +89,5 @@ export function resolveAnimationTransition(
     return null;
   }
 
-  return (
-    transitionMap?.[triggerId]?.[verticalDirection] ??
-    defaultTransitionMap[triggerId]?.[verticalDirection] ??
-    null
-  );
+  return defaultTransitionMap[triggerId]?.[verticalDirection] ?? null;
 }

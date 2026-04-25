@@ -4,7 +4,11 @@ import { registerSentinel, type SentinelRegistration } from './AtomTrigger.sched
 import { resolveSchedulerTarget } from './AtomTrigger.root';
 import { resetObservationState } from './AtomTrigger.sampling';
 import { finishDomTestRun, prepareDomTestRun, setNodeEnv, setRect } from './AtomTrigger.testUtils';
-import { invalidRootRefWarning, invalidRootWarning } from './AtomTrigger.warnings';
+import {
+  getWarningMessage,
+  invalidRootRefWarning,
+  invalidRootWarning,
+} from './AtomTrigger.warnings';
 
 function createRegistration(
   node: Element,
@@ -127,8 +131,18 @@ describe('AtomTrigger scheduler helpers', () => {
 
     expect(resolveSchedulerTarget({ kind: 'root', target: pseudoRoot })).toBeNull();
     expect(resolveSchedulerTarget({ kind: 'rootRef', target: pseudoRoot })).toBeNull();
-    expect(warn).toHaveBeenCalledWith(invalidRootWarning);
-    expect(warn).toHaveBeenCalledWith(invalidRootRefWarning);
+    expect(warn).toHaveBeenCalledWith(getWarningMessage(invalidRootWarning));
+    expect(warn).toHaveBeenCalledWith(getWarningMessage(invalidRootRefWarning));
+  });
+
+  it('keeps invalid explicit root warnings out of non-development runtimes', () => {
+    setNodeEnv('production');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const pseudoRoot = { nodeType: 1 } as unknown as HTMLDivElement;
+
+    expect(resolveSchedulerTarget({ kind: 'root', target: pseudoRoot })).toBeNull();
+    expect(resolveSchedulerTarget({ kind: 'rootRef', target: pseudoRoot })).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('returns null when the runtime has no viewport target', () => {

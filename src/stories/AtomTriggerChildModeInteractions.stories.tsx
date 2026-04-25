@@ -4,7 +4,7 @@ import { expect, waitFor } from 'storybook/test';
 import {
   ChildModeInteractionHarness,
   type ChildModeInteractionHarnessProps,
-} from './components/DeterministicInteractionHarness';
+} from './components/InteractionHarness';
 import { atomTriggerActionArgs, atomTriggerArgTypes } from './storybookArgs';
 
 const meta: Meta<ChildModeInteractionHarnessProps> = {

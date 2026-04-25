@@ -22,6 +22,7 @@ import {
 import {
   childModeClassNameWarning,
   conflictingOnceModesWarning,
+  getWarningMessage,
   warnOnce,
 } from './AtomTrigger.warnings';
 
@@ -72,20 +73,20 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
   });
 
   React.useEffect(() => {
-    if (hasObservedChild && className) {
-      warnOnce(childModeClassNameWarning);
+    if (process.env.NODE_ENV === 'development' && hasObservedChild && className) {
+      warnOnce(getWarningMessage(childModeClassNameWarning));
     }
   }, [className, hasObservedChild]);
 
   React.useEffect(() => {
-    if (invalidChildWarning) {
-      warnOnce(invalidChildWarning);
+    if (process.env.NODE_ENV === 'development' && invalidChildWarning) {
+      warnOnce(getWarningMessage(invalidChildWarning));
     }
   }, [invalidChildWarning]);
 
   React.useEffect(() => {
-    if (once && oncePerDirection) {
-      warnOnce(conflictingOnceModesWarning);
+    if (process.env.NODE_ENV === 'development' && once && oncePerDirection) {
+      warnOnce(getWarningMessage(conflictingOnceModesWarning));
     }
   }, [once, oncePerDirection]);
 

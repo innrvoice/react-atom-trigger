@@ -33,7 +33,7 @@ export const atomTriggerArgTypes = {
   },
   initialVerticalScrollTop: {
     control: { type: 'number', min: 0, step: 10 },
-    description: 'Initial scroll position used by deterministic vertical harnesses.',
+    description: 'Initial scroll position used by controlled vertical harnesses.',
   },
   headerHeight: {
     control: { type: 'number', min: 0, max: 240, step: 10 },
