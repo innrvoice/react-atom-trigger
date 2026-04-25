@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  fragmentChildWarning,
-  getWarningMessage,
-  invalidChildCountWarning,
-  invalidChildElementWarning,
-  nonDomChildRefWarning,
-  unsupportedChildRefWarning,
-  type AtomTriggerWarning,
-  warnOnce,
-} from './AtomTrigger.warnings';
+import { warningMessages, warnOnce } from './AtomTrigger.warnings';
 import { isDomElementLike } from './AtomTrigger.runtime';
 
 const missingDomRefWarningDelayMs = 16;
@@ -70,21 +61,21 @@ export function getInvalidChildWarning(
   usesChildObservation: boolean,
   childCount: number,
   singleChildElement: React.ReactElement | null,
-): AtomTriggerWarning | null {
+): string | null {
   if (!usesChildObservation) {
     return null;
   }
 
   if (childCount !== 1) {
-    return invalidChildCountWarning;
+    return warningMessages.invalidChildCount;
   }
 
   if (!singleChildElement) {
-    return invalidChildElementWarning;
+    return warningMessages.invalidChildElement;
   }
 
   if (singleChildElement.type === React.Fragment) {
-    return fragmentChildWarning;
+    return warningMessages.fragmentChild;
   }
 
   return null;
@@ -98,7 +89,7 @@ export function useObservedChildNode({
 }: {
   originalChildRef: React.Ref<unknown> | undefined;
   hasObservedChild: boolean;
-  invalidChildWarning: AtomTriggerWarning | null;
+  invalidChildWarning: string | null;
   shouldWarnAboutMissingDomRef: boolean;
 }): ObservedChildBinding {
   const [childNode, setChildNode] = React.useState<Element | null>(null);
@@ -126,7 +117,7 @@ export function useObservedChildNode({
 
       clearObservedChildNode();
       if (process.env.NODE_ENV === 'development') {
-        warnOnce(getWarningMessage(nonDomChildRefWarning));
+        warnOnce(warningMessages.nonDomChildRef);
       }
     },
     [clearObservedChildNode, originalChildRef],
@@ -146,7 +137,7 @@ export function useObservedChildNode({
       }
 
       if (process.env.NODE_ENV === 'development') {
-        warnOnce(getWarningMessage(unsupportedChildRefWarning));
+        warnOnce(warningMessages.unsupportedChildRef);
       }
     }, missingDomRefWarningDelayMs);
 

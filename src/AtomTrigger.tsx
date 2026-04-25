@@ -8,23 +8,18 @@ import {
 } from './AtomTrigger.childMode';
 import { normalizeRootMargin, normalizeThreshold } from './AtomTrigger.geometry';
 import {
-  createObservationController,
-  disposeObservationController,
-  reconcileObservationBinding,
+  cleanupObservationState,
+  createObservationState,
+  syncObservationSubscription,
   updateObservationCallbacks,
-  type ObservationController,
+  type ObservationState,
 } from './AtomTrigger.observation';
 import {
   resolveSchedulerTarget,
   useTrackedRootRefTarget,
   type SchedulerTargetSource,
 } from './AtomTrigger.root';
-import {
-  childModeClassNameWarning,
-  conflictingOnceModesWarning,
-  getWarningMessage,
-  warnOnce,
-} from './AtomTrigger.warnings';
+import { warningMessages, warnOnce } from './AtomTrigger.warnings';
 
 const defaultSentinelStyle = { display: 'table' } satisfies React.CSSProperties;
 
@@ -44,7 +39,7 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
   className,
 }) => {
   const sentinelRef = React.useRef<HTMLDivElement>(null);
-  const controllerRef = React.useRef<ObservationController | null>(null);
+  const observationRef = React.useRef<ObservationState | null>(null);
   const trackedRootRefTarget = useTrackedRootRefTarget(rootRef);
 
   const normalizedRootMargin = normalizeRootMargin(rootMargin);
@@ -74,29 +69,29 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development' && hasObservedChild && className) {
-      warnOnce(getWarningMessage(childModeClassNameWarning));
+      warnOnce(warningMessages.childModeClassName);
     }
   }, [className, hasObservedChild]);
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development' && invalidChildWarning) {
-      warnOnce(getWarningMessage(invalidChildWarning));
+      warnOnce(invalidChildWarning);
     }
   }, [invalidChildWarning]);
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development' && once && oncePerDirection) {
-      warnOnce(getWarningMessage(conflictingOnceModesWarning));
+      warnOnce(warningMessages.conflictingOnceModes);
     }
   }, [once, oncePerDirection]);
 
   React.useEffect(() => {
-    const controller = controllerRef.current;
-    if (!controller) {
+    const observation = observationRef.current;
+    if (!observation) {
       return;
     }
 
-    updateObservationCallbacks(controller, { onEnter, onLeave, onEvent });
+    updateObservationCallbacks(observation, { onEnter, onLeave, onEvent });
   }, [onEnter, onLeave, onEvent]);
 
   React.useEffect(() => {
@@ -114,8 +109,8 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
     const resolvedRoot = resolveSchedulerTarget(targetSource);
 
     if (!node) {
-      if (controllerRef.current) {
-        reconcileObservationBinding(controllerRef.current, {
+      if (observationRef.current) {
+        syncObservationSubscription(observationRef.current, {
           disabled: false,
           node: null,
           target: resolvedRoot,
@@ -129,8 +124,8 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
       return;
     }
 
-    if (!controllerRef.current) {
-      controllerRef.current = createObservationController(
+    if (!observationRef.current) {
+      observationRef.current = createObservationState(
         {
           node,
           rootMargin: normalizedRootMargin,
@@ -143,7 +138,7 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
       );
     }
 
-    reconcileObservationBinding(controllerRef.current, {
+    syncObservationSubscription(observationRef.current, {
       disabled,
       node,
       target: resolvedRoot,
@@ -169,12 +164,12 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
 
   React.useEffect(
     () => () => {
-      if (!controllerRef.current) {
+      if (!observationRef.current) {
         return;
       }
 
-      disposeObservationController(controllerRef.current);
-      controllerRef.current = null;
+      cleanupObservationState(observationRef.current);
+      observationRef.current = null;
     },
     [],
   );

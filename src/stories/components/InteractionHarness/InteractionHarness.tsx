@@ -1,7 +1,15 @@
 import React from 'react';
 import { AtomTrigger } from '../../../index';
 import type { AtomTriggerEvent } from '../../../index';
-import { addHarnessEvent, CounterPanel, type InteractionHarnessProps } from './shared';
+import {
+  addHarnessEvent,
+  CounterPanel,
+  dispatchElementScroll,
+  markHarnessReady,
+  mockElementRect,
+  runFrameSequence,
+  type InteractionHarnessProps,
+} from './shared';
 
 export function InteractionHarness({
   once = false,
@@ -36,28 +44,20 @@ export function InteractionHarness({
       return;
     }
 
-    Object.defineProperty(verticalRoot, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(0, 0, 200, 180),
-    });
-    Object.defineProperty(horizontalRoot, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(0, 0, 200, 120),
-    });
-    Object.defineProperty(verticalSentinel, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(0, 260 - verticalScrollTopRef.current, 10, 10),
-    });
-    Object.defineProperty(horizontalSentinel, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(260 - horizontalScrollLeftRef.current, 0, 2, 160),
-    });
+    mockElementRect(verticalRoot, () => new DOMRect(0, 0, 200, 180));
+    mockElementRect(horizontalRoot, () => new DOMRect(0, 0, 200, 120));
+    mockElementRect(
+      verticalSentinel,
+      () => new DOMRect(0, 260 - verticalScrollTopRef.current, 10, 10),
+    );
+    mockElementRect(
+      horizontalSentinel,
+      () => new DOMRect(260 - horizontalScrollLeftRef.current, 0, 2, 160),
+    );
 
     verticalScrollTopRef.current = initialVerticalScrollTop;
     horizontalScrollLeftRef.current = 0;
-    const readyId = window.requestAnimationFrame(() => {
-      setHarnessReady(true);
-    });
+    const readyId = markHarnessReady(setHarnessReady);
 
     return () => {
       window.cancelAnimationFrame(readyId);
@@ -78,11 +78,7 @@ export function InteractionHarness({
     }
 
     verticalScrollTopRef.current = nextTop;
-    root.dispatchEvent(
-      new root.ownerDocument.defaultView!.Event('scroll', {
-        bubbles: true,
-      }),
-    );
+    dispatchElementScroll(root);
   }, []);
 
   const scrollHorizontal = React.useCallback((nextLeft: number) => {
@@ -92,11 +88,7 @@ export function InteractionHarness({
     }
 
     horizontalScrollLeftRef.current = nextLeft;
-    root.dispatchEvent(
-      new root.ownerDocument.defaultView!.Event('scroll', {
-        bubbles: true,
-      }),
-    );
+    dispatchElementScroll(root);
   }, []);
 
   const emitEnter = React.useCallback(() => {
@@ -109,24 +101,12 @@ export function InteractionHarness({
 
   const runVerticalSequence = React.useCallback(() => {
     scrollVertical(0);
-
-    window.requestAnimationFrame(() => {
-      scrollVertical(120);
-      window.requestAnimationFrame(() => {
-        scrollVertical(280);
-      });
-    });
+    runFrameSequence([() => scrollVertical(120), () => scrollVertical(280)]);
   }, [scrollVertical]);
 
   const runHorizontalSequence = React.useCallback(() => {
     scrollHorizontal(0);
-
-    window.requestAnimationFrame(() => {
-      scrollHorizontal(120);
-      window.requestAnimationFrame(() => {
-        scrollHorizontal(320);
-      });
-    });
+    runFrameSequence([() => scrollHorizontal(120), () => scrollHorizontal(320)]);
   }, [scrollHorizontal]);
 
   const resetHarness = React.useCallback(() => {

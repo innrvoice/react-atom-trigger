@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as scheduler from './AtomTrigger.scheduler';
 import * as sampling from './AtomTrigger.sampling';
 import {
-  createObservationController,
-  disposeObservationController,
-  reconcileObservationBinding,
+  cleanupObservationState,
+  createObservationState,
+  syncObservationSubscription,
   updateObservationCallbacks,
 } from './AtomTrigger.observation';
 
@@ -12,7 +12,7 @@ function createNode(): Element {
   return document.createElement('div');
 }
 
-describe('AtomTrigger observation controller', () => {
+describe('AtomTrigger observation state', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -21,7 +21,7 @@ describe('AtomTrigger observation controller', () => {
     const node = createNode();
     const firstOnEnter = vi.fn();
     const secondOnEnter = vi.fn();
-    const controller = createObservationController(
+    const observation = createObservationState(
       {
         node,
         rootMargin: '0px',
@@ -33,15 +33,15 @@ describe('AtomTrigger observation controller', () => {
       { onEnter: firstOnEnter },
     );
 
-    updateObservationCallbacks(controller, { onEnter: secondOnEnter });
+    updateObservationCallbacks(observation, { onEnter: secondOnEnter });
 
-    expect(controller.registration.node).toBe(node);
-    expect(controller.registration.onEnter).toBe(secondOnEnter);
+    expect(observation.registration.node).toBe(node);
+    expect(observation.registration.onEnter).toBe(secondOnEnter);
   });
 
-  it('clears binding state when no node is available', () => {
-    const dispose = vi.fn();
-    const controller = createObservationController(
+  it('clears subscription state when no node is available', () => {
+    const unsubscribe = vi.fn();
+    const observation = createObservationState(
       {
         node: createNode(),
         rootMargin: '0px',
@@ -53,8 +53,8 @@ describe('AtomTrigger observation controller', () => {
       {},
     );
 
-    controller.dispose = dispose;
-    controller.binding = {
+    observation.unsubscribe = unsubscribe;
+    observation.subscription = {
       node: createNode(),
       target: window,
       rootMargin: '0px',
@@ -64,7 +64,7 @@ describe('AtomTrigger observation controller', () => {
       fireOnInitialVisible: false,
     };
 
-    reconcileObservationBinding(controller, {
+    syncObservationSubscription(observation, {
       disabled: false,
       node: null,
       target: window,
@@ -75,14 +75,14 @@ describe('AtomTrigger observation controller', () => {
       fireOnInitialVisible: false,
     });
 
-    expect(dispose).toHaveBeenCalledTimes(1);
-    expect(controller.binding).toBeNull();
-    expect(controller.dispose).toBeNull();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(observation.subscription).toBeNull();
+    expect(observation.unsubscribe).toBeNull();
   });
 
   it('resets and stays unsubscribed when disabled or missing a target', () => {
     const resetSpy = vi.spyOn(sampling, 'resetObservationState');
-    const controller = createObservationController(
+    const observation = createObservationState(
       {
         node: createNode(),
         rootMargin: '0px',
@@ -94,9 +94,9 @@ describe('AtomTrigger observation controller', () => {
       {},
     );
 
-    reconcileObservationBinding(controller, {
+    syncObservationSubscription(observation, {
       disabled: true,
-      node: controller.registration.node,
+      node: observation.registration.node,
       target: null,
       rootMargin: '10px',
       threshold: 1,
@@ -105,15 +105,15 @@ describe('AtomTrigger observation controller', () => {
       fireOnInitialVisible: true,
     });
 
-    expect(resetSpy).toHaveBeenCalledWith(controller.registration);
-    expect(controller.binding).toBeNull();
-    expect(controller.dispose).toBeNull();
-    expect(controller.registration.node).toBe(controller.registration.node);
+    expect(resetSpy).toHaveBeenCalledWith(observation.registration);
+    expect(observation.subscription).toBeNull();
+    expect(observation.unsubscribe).toBeNull();
+    expect(observation.registration.node).toBe(observation.registration.node);
   });
 
-  it('avoids resubscribing when the binding snapshot is unchanged', () => {
+  it('avoids resubscribing when the subscription snapshot is unchanged', () => {
     const registerSpy = vi.spyOn(scheduler, 'registerSentinel').mockReturnValue(vi.fn());
-    const controller = createObservationController(
+    const observation = createObservationState(
       {
         node: createNode(),
         rootMargin: '0px',
@@ -127,7 +127,7 @@ describe('AtomTrigger observation controller', () => {
 
     const input = {
       disabled: false,
-      node: controller.registration.node,
+      node: observation.registration.node,
       target: window,
       rootMargin: '0px',
       threshold: 0,
@@ -136,15 +136,15 @@ describe('AtomTrigger observation controller', () => {
       fireOnInitialVisible: false,
     } as const;
 
-    reconcileObservationBinding(controller, input);
-    reconcileObservationBinding(controller, input);
+    syncObservationSubscription(observation, input);
+    syncObservationSubscription(observation, input);
 
     expect(registerSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('cleans up an active subscription when the controller is disposed', () => {
-    const dispose = vi.fn();
-    const controller = createObservationController(
+  it('cleans up an active subscription when the observation state is cleaned up', () => {
+    const unsubscribe = vi.fn();
+    const observation = createObservationState(
       {
         node: createNode(),
         rootMargin: '0px',
@@ -156,11 +156,11 @@ describe('AtomTrigger observation controller', () => {
       {},
     );
 
-    controller.dispose = dispose;
-    disposeObservationController(controller);
+    observation.unsubscribe = unsubscribe;
+    cleanupObservationState(observation);
 
-    expect(dispose).toHaveBeenCalledTimes(1);
-    expect(controller.binding).toBeNull();
-    expect(controller.dispose).toBeNull();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(observation.subscription).toBeNull();
+    expect(observation.unsubscribe).toBeNull();
   });
 });

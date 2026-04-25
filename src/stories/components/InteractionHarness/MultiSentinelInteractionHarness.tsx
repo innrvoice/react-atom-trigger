@@ -1,7 +1,15 @@
 import React from 'react';
 import { AtomTrigger } from '../../../index';
 import type { AtomTriggerEvent } from '../../../index';
-import { addHarnessEvent, CounterPanel, type SharedHarnessEventCallbacks } from './shared';
+import {
+  addHarnessEvent,
+  CounterPanel,
+  dispatchElementScroll,
+  markHarnessReady,
+  mockElementRect,
+  runFrameSequence,
+  type SharedHarnessEventCallbacks,
+} from './shared';
 
 export function MultiSentinelInteractionHarness({
   onEnter,
@@ -36,32 +44,15 @@ export function MultiSentinelInteractionHarness({
       return;
     }
 
-    Object.defineProperty(sharedRoot, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(0, 0, 200, 180),
-    });
-    Object.defineProperty(horizontalFirst, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(40, 260 - scrollTopRef.current, 120, 2),
-    });
-    Object.defineProperty(horizontalSecond, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(40, 290 - scrollTopRef.current, 120, 2),
-    });
-    Object.defineProperty(verticalThird, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(260 - scrollLeftRef.current, 10, 2, 160),
-    });
-    Object.defineProperty(verticalFourth, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(275 - scrollLeftRef.current, 10, 2, 160),
-    });
+    mockElementRect(sharedRoot, () => new DOMRect(0, 0, 200, 180));
+    mockElementRect(horizontalFirst, () => new DOMRect(40, 260 - scrollTopRef.current, 120, 2));
+    mockElementRect(horizontalSecond, () => new DOMRect(40, 290 - scrollTopRef.current, 120, 2));
+    mockElementRect(verticalThird, () => new DOMRect(260 - scrollLeftRef.current, 10, 2, 160));
+    mockElementRect(verticalFourth, () => new DOMRect(275 - scrollLeftRef.current, 10, 2, 160));
 
     scrollTopRef.current = 0;
     scrollLeftRef.current = 0;
-    const readyId = window.requestAnimationFrame(() => {
-      setHarnessReady(true);
-    });
+    const readyId = markHarnessReady(setHarnessReady);
 
     return () => {
       window.cancelAnimationFrame(readyId);
@@ -75,11 +66,7 @@ export function MultiSentinelInteractionHarness({
     }
 
     scrollTopRef.current = nextTop;
-    root.dispatchEvent(
-      new root.ownerDocument.defaultView!.Event('scroll', {
-        bubbles: true,
-      }),
-    );
+    dispatchElementScroll(root);
   }, []);
 
   const scrollHorizontal = React.useCallback((nextLeft: number) => {
@@ -89,33 +76,17 @@ export function MultiSentinelInteractionHarness({
     }
 
     scrollLeftRef.current = nextLeft;
-    root.dispatchEvent(
-      new root.ownerDocument.defaultView!.Event('scroll', {
-        bubbles: true,
-      }),
-    );
+    dispatchElementScroll(root);
   }, []);
 
   const runVerticalSequence = React.useCallback(() => {
     scrollVertical(0);
-
-    window.requestAnimationFrame(() => {
-      scrollVertical(120);
-      window.requestAnimationFrame(() => {
-        scrollVertical(320);
-      });
-    });
+    runFrameSequence([() => scrollVertical(120), () => scrollVertical(320)]);
   }, [scrollVertical]);
 
   const runHorizontalSequence = React.useCallback(() => {
     scrollHorizontal(0);
-
-    window.requestAnimationFrame(() => {
-      scrollHorizontal(120);
-      window.requestAnimationFrame(() => {
-        scrollHorizontal(280);
-      });
-    });
+    runFrameSequence([() => scrollHorizontal(120), () => scrollHorizontal(280)]);
   }, [scrollHorizontal]);
 
   const resetHarness = React.useCallback(() => {

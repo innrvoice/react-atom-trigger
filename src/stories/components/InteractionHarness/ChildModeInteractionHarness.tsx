@@ -1,7 +1,15 @@
 import React from 'react';
 import { AtomTrigger } from '../../../index';
 import type { AtomTriggerEvent } from '../../../index';
-import { addHarnessEvent, CounterPanel, type ChildModeInteractionHarnessProps } from './shared';
+import {
+  addHarnessEvent,
+  CounterPanel,
+  dispatchElementScroll,
+  markHarnessReady,
+  mockElementRect,
+  runFrameSequence,
+  type ChildModeInteractionHarnessProps,
+} from './shared';
 
 export function ChildModeInteractionHarness({
   threshold = 0,
@@ -25,20 +33,12 @@ export function ChildModeInteractionHarness({
       return;
     }
 
-    Object.defineProperty(root, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(0, 0, 200, 200),
-    });
-    Object.defineProperty(child, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => new DOMRect(20, 260 - scrollTopRef.current, 160, 100),
-    });
+    mockElementRect(root, () => new DOMRect(0, 0, 200, 200));
+    mockElementRect(child, () => new DOMRect(20, 260 - scrollTopRef.current, 160, 100));
 
     scrollTopRef.current = 0;
     setCurrentScrollTop(0);
-    const readyId = window.requestAnimationFrame(() => {
-      setHarnessReady(true);
-    });
+    const readyId = markHarnessReady(setHarnessReady);
 
     return () => {
       window.cancelAnimationFrame(readyId);
@@ -53,11 +53,7 @@ export function ChildModeInteractionHarness({
 
     scrollTopRef.current = nextTop;
     setCurrentScrollTop(nextTop);
-    root.dispatchEvent(
-      new root.ownerDocument.defaultView!.Event('scroll', {
-        bubbles: true,
-      }),
-    );
+    dispatchElementScroll(root);
   }, []);
 
   const triggerBasicEnter = React.useCallback(() => {
@@ -78,19 +74,15 @@ export function ChildModeInteractionHarness({
 
   const runSequence = React.useCallback(() => {
     scrollVertical(0);
-
-    window.requestAnimationFrame(() => {
-      scrollVertical(threshold > 0 ? 134 : 120);
-      window.requestAnimationFrame(() => {
+    runFrameSequence([
+      () => scrollVertical(threshold > 0 ? 134 : 120),
+      () => {
         if (threshold > 0) {
           scrollVertical(135);
         }
-
-        window.requestAnimationFrame(() => {
-          scrollVertical(360);
-        });
-      });
-    });
+      },
+      () => scrollVertical(360),
+    ]);
   }, [scrollVertical, threshold]);
 
   const resetHarness = React.useCallback(() => {

@@ -18,14 +18,14 @@ export type ObservationCallbacks = {
   onEvent?: (event: AtomTriggerEvent) => void;
 };
 
-export type ObservationBinding = ObservationConfig & {
+export type SubscriptionSnapshot = ObservationConfig & {
   target: SchedulerTarget;
 };
 
-export type ObservationController = {
+export type ObservationState = {
   registration: SentinelRegistration;
-  binding: ObservationBinding | null;
-  dispose: (() => void) | null;
+  subscription: SubscriptionSnapshot | null;
+  unsubscribe: (() => void) | null;
 };
 
 function createRegistration(
@@ -44,34 +44,34 @@ function createRegistration(
   };
 }
 
-function clearObservationBinding(controller: ObservationController): void {
-  controller.dispose?.();
-  controller.dispose = null;
-  controller.binding = null;
+function clearObservationSubscription(observation: ObservationState): void {
+  observation.unsubscribe?.();
+  observation.unsubscribe = null;
+  observation.subscription = null;
 }
 
-export function createObservationController(
+export function createObservationState(
   config: ObservationConfig,
   callbacks: ObservationCallbacks,
-): ObservationController {
+): ObservationState {
   return {
     registration: createRegistration(config, callbacks),
-    binding: null,
-    dispose: null,
+    subscription: null,
+    unsubscribe: null,
   };
 }
 
 export function updateObservationCallbacks(
-  controller: ObservationController,
+  observation: ObservationState,
   callbacks: ObservationCallbacks,
 ): void {
-  controller.registration.onEnter = callbacks.onEnter;
-  controller.registration.onLeave = callbacks.onLeave;
-  controller.registration.onEvent = callbacks.onEvent;
+  observation.registration.onEnter = callbacks.onEnter;
+  observation.registration.onLeave = callbacks.onLeave;
+  observation.registration.onEvent = callbacks.onEvent;
 }
 
-export function reconcileObservationBinding(
-  controller: ObservationController,
+export function syncObservationSubscription(
+  observation: ObservationState,
   input: {
     disabled: boolean;
     node: Element | null;
@@ -83,11 +83,11 @@ export function reconcileObservationBinding(
     fireOnInitialVisible: boolean;
   },
 ): void {
-  const registration = controller.registration;
+  const registration = observation.registration;
 
   if (!input.node) {
     resetObservationState(registration);
-    clearObservationBinding(controller);
+    clearObservationSubscription(observation);
     return;
   }
 
@@ -101,39 +101,39 @@ export function reconcileObservationBinding(
   };
 
   if (input.disabled || !input.target) {
-    clearObservationBinding(controller);
+    clearObservationSubscription(observation);
     Object.assign(registration, nextConfig);
     resetObservationState(registration);
     return;
   }
 
-  const nextBinding: ObservationBinding = {
+  const nextSubscription: SubscriptionSnapshot = {
     ...nextConfig,
     target: input.target,
   };
 
-  const bindingUnchanged =
-    controller.binding !== null &&
-    controller.binding.node === nextBinding.node &&
-    controller.binding.target === nextBinding.target &&
-    controller.binding.rootMargin === nextBinding.rootMargin &&
-    controller.binding.threshold === nextBinding.threshold &&
-    controller.binding.once === nextBinding.once &&
-    controller.binding.oncePerDirection === nextBinding.oncePerDirection &&
-    controller.binding.fireOnInitialVisible === nextBinding.fireOnInitialVisible;
+  const subscriptionUnchanged =
+    observation.subscription !== null &&
+    observation.subscription.node === nextSubscription.node &&
+    observation.subscription.target === nextSubscription.target &&
+    observation.subscription.rootMargin === nextSubscription.rootMargin &&
+    observation.subscription.threshold === nextSubscription.threshold &&
+    observation.subscription.once === nextSubscription.once &&
+    observation.subscription.oncePerDirection === nextSubscription.oncePerDirection &&
+    observation.subscription.fireOnInitialVisible === nextSubscription.fireOnInitialVisible;
 
-  if (bindingUnchanged) {
+  if (subscriptionUnchanged) {
     Object.assign(registration, nextConfig);
     return;
   }
 
   resetObservationState(registration);
-  clearObservationBinding(controller);
+  clearObservationSubscription(observation);
   Object.assign(registration, nextConfig);
-  controller.dispose = registerSentinel(input.target, registration);
-  controller.binding = nextBinding;
+  observation.unsubscribe = registerSentinel(input.target, registration);
+  observation.subscription = nextSubscription;
 }
 
-export function disposeObservationController(controller: ObservationController): void {
-  clearObservationBinding(controller);
+export function cleanupObservationState(observation: ObservationState): void {
+  clearObservationSubscription(observation);
 }

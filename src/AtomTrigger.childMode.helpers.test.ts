@@ -8,13 +8,7 @@ import {
   useObservedChildNode,
   type ChildElementWithOptionalRef,
 } from './AtomTrigger.childMode';
-import {
-  fragmentChildWarning,
-  getWarningMessage,
-  invalidChildCountWarning,
-  invalidChildElementWarning,
-  unsupportedChildRefWarning,
-} from './AtomTrigger.warnings';
+import { warningMessages } from './AtomTrigger.warnings';
 
 const initialNodeEnv = process.env.NODE_ENV;
 
@@ -90,16 +84,16 @@ describe('AtomTrigger child mode helpers', () => {
     });
 
     it('warns when more than one top-level child is passed', () => {
-      expect(getInvalidChildWarning(true, 2, childElement)).toBe(invalidChildCountWarning);
+      expect(getInvalidChildWarning(true, 2, childElement)).toBe(warningMessages.invalidChildCount);
     });
 
     it('warns when the child is not a React element', () => {
-      expect(getInvalidChildWarning(true, 1, null)).toBe(invalidChildElementWarning);
+      expect(getInvalidChildWarning(true, 1, null)).toBe(warningMessages.invalidChildElement);
     });
 
     it('warns when the child is a fragment', () => {
       expect(getInvalidChildWarning(true, 1, React.createElement(React.Fragment))).toBe(
-        fragmentChildWarning,
+        warningMessages.fragmentChild,
       );
     });
 
@@ -202,7 +196,7 @@ describe('AtomTrigger child mode helpers', () => {
         vi.advanceTimersByTime(16);
       });
 
-      expect(warn).not.toHaveBeenCalledWith(getWarningMessage(unsupportedChildRefWarning));
+      expect(warn).not.toHaveBeenCalledWith(warningMessages.unsupportedChildRef);
     });
 
     it('keeps the observed child node stable when the same DOM ref is attached again', () => {
@@ -258,7 +252,7 @@ describe('AtomTrigger child mode helpers', () => {
         vi.advanceTimersByTime(16);
       });
 
-      expect(warn).not.toHaveBeenCalledWith(getWarningMessage(unsupportedChildRefWarning));
+      expect(warn).not.toHaveBeenCalledWith(warningMessages.unsupportedChildRef);
     });
   });
 });

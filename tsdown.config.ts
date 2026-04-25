@@ -1,5 +1,9 @@
+import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import type { OutputOptions } from 'rolldown';
 import { defineConfig, type UserConfig } from 'tsdown';
+
+const codecovToken = process.env.CODECOV_TOKEN;
+const enableBundleAnalysis = process.env.CI === 'true' && Boolean(codecovToken);
 
 const baseConfig = {
   entry: './src/index.ts',
@@ -58,6 +62,11 @@ export default defineConfig([
     format: 'esm',
     dts: true,
     clean: true,
+    plugins: codecovRollupPlugin({
+      enableBundleAnalysis,
+      bundleName: 'react-atom-trigger',
+      uploadToken: codecovToken,
+    }),
     outExtensions: ({ format }) => getOutExtensions(format),
     outputOptions: (options, format) => withReactGlobals(options, format),
   },
