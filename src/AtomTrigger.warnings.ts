@@ -21,6 +21,12 @@ export const warningMessages = {
     '[react-atom-trigger] `rootRef.current` must resolve to a real DOM element. Observation is paused until it does.',
 } as const;
 
+export type AtomTriggerWarning = keyof typeof warningMessages;
+
+export function getWarningMessage(warning: AtomTriggerWarning): string {
+  return warningMessages[warning];
+}
+
 function getKnownNodeEnv(): 'development' | 'production' | null {
   if (typeof process === 'undefined' || !process.env) {
     return null;

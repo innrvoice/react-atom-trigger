@@ -1,6 +1,6 @@
 import React from 'react';
 import { isDomElementLike } from './AtomTrigger.runtime';
-import { warningMessages, warnOnce } from './AtomTrigger.warnings';
+import { getWarningMessage, type AtomTriggerWarning, warnOnce } from './AtomTrigger.warnings';
 
 export type SchedulerTarget = Window | Element;
 
@@ -12,8 +12,7 @@ export type SchedulerTargetSource =
 function resolveExplicitRootTarget(
   source: Extract<SchedulerTargetSource, { kind: 'rootRef' | 'root' }>,
 ): Element | null {
-  const warningMessage =
-    source.kind === 'rootRef' ? warningMessages.invalidRootRef : warningMessages.invalidRoot;
+  const warning: AtomTriggerWarning = source.kind === 'rootRef' ? 'invalidRootRef' : 'invalidRoot';
   const { target } = source;
 
   if (target === null || target === undefined) {
@@ -25,7 +24,7 @@ function resolveExplicitRootTarget(
   }
 
   if (process.env.NODE_ENV === 'development') {
-    warnOnce(warningMessage);
+    warnOnce(getWarningMessage(warning));
   }
   return null;
 }

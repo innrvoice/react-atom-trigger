@@ -6,9 +6,12 @@
 `react-atom-trigger` helps with the usual "run some code when this thing enters or leaves view" problem.
 It is a lightweight React alternative to `react-waypoint`, written in TypeScript.
 
-## v2 is a breaking release
+## Breaking changes
 
-If you are coming from `v1.x`, please check [MIGRATION.md](./MIGRATION.md).
+`v2` is a breaking release. If you are coming from `v1.x`, please check
+[MIGRATION.md](./MIGRATION.md).
+
+`v2.1` removes the helper hooks `useScrollPosition` and `useViewportSize`. `AtomTrigger` does its own observation and does not depend on those hooks.
 
 If you want to stay on the old API:
 
@@ -208,33 +211,6 @@ The payload is library-owned geometry data. It is not a native `IntersectionObse
 `isInitial` is `true` only for the synthetic first `enter` created by
 `fireOnInitialVisible`.
 
-## Hooks
-
-For someone who wants everything out-of-the-box, `useScrollPosition` and `useViewportSize` are also available.
-
-```ts
-useScrollPosition(options?: {
-  target?: Window | HTMLElement | React.RefObject<HTMLElement | null>;
-  passive?: boolean;
-  throttleMs?: number;
-  enabled?: boolean;
-}): { x: number; y: number }
-```
-
-```ts
-useViewportSize(options?: {
-  passive?: boolean;
-  throttleMs?: number;
-  enabled?: boolean;
-}): { width: number; height: number }
-```
-
-Both hooks are SSR-safe and hydration-safe across the supported React range. During hydration, the first client render matches the server snapshot and then refreshes from the live source, including the compat path used when React does not expose `useSyncExternalStore`. Default throttling is `16ms`.
-
-If you pass `enabled={false}`, the hook pauses its listeners but keeps the latest value it already knows.
-It does not fake a reset back to zero.
-When you enable it again, it reads from the source immediately and then continues updating as usual.
-
 ## Notes
 
 - In sentinel mode, `threshold` is usually only interesting if your sentinel has real width or height. The default sentinel is almost point-like.
@@ -252,8 +228,7 @@ The short version:
 2. `behavior` is gone.
 3. `triggerOnce` became `once` or `oncePerDirection`.
 4. `scrollEvent`, `dimensions` and `offset` are gone.
-5. `useWindowScroll` / `useContainerScroll` became `useScrollPosition`.
-6. `useWindowDimensions` became `useViewportSize`.
+5. Legacy helper hooks are no longer exported in `v2.1`. Use your app's own scroll or viewport hooks when needed.
 
 For the real upgrade notes and examples, see [MIGRATION.md](./MIGRATION.md).
 
