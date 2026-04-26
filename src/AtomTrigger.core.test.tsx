@@ -248,7 +248,7 @@ describe('AtomTrigger threshold behavior', () => {
     expect(onEnter).toHaveBeenCalledTimes(2);
   });
 
-  it('warns and uses the first numeric threshold entry from untyped array input', () => {
+  it('warns and falls back to zero for untyped array threshold input', () => {
     setNodeEnv('development');
     const onEnter = vi.fn();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -256,12 +256,9 @@ describe('AtomTrigger threshold behavior', () => {
 
     scrollElement(root, 0);
     scrollElement(root, 65);
-    expect(onEnter).toHaveBeenCalledTimes(0);
-
-    scrollElement(root, 68);
     expect(onEnter).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
-      '[react-atom-trigger] `threshold` expects a single number in v2. Using the first finite numeric entry.',
+      '[react-atom-trigger] `threshold` must be a finite number between 0 and 1. Falling back to 0.',
     );
   });
 
