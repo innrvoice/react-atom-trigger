@@ -19,7 +19,7 @@ import {
   useTrackedRootRefTarget,
   type SchedulerTargetSource,
 } from './AtomTrigger.root';
-import { warningMessages, warnOnce } from './AtomTrigger.warnings';
+import { getWarningMessage, warnOnce } from './AtomTrigger.warnings';
 
 const defaultSentinelStyle = { display: 'table' } satisfies React.CSSProperties;
 
@@ -69,19 +69,19 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development' && hasObservedChild && className) {
-      warnOnce(warningMessages.childModeClassName);
+      warnOnce(getWarningMessage('childModeClassName'));
     }
   }, [className, hasObservedChild]);
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development' && invalidChildWarning) {
-      warnOnce(invalidChildWarning);
+      warnOnce(getWarningMessage(invalidChildWarning));
     }
   }, [invalidChildWarning]);
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development' && once && oncePerDirection) {
-      warnOnce(warningMessages.conflictingOnceModes);
+      warnOnce(getWarningMessage('conflictingOnceModes'));
     }
   }, [once, oncePerDirection]);
 

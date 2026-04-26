@@ -48,7 +48,7 @@ globalThis.IntersectionObserver = class {
 };
 
 const packageImport = process.env.REACT_ATOM_TRIGGER_IMPORT ?? '../lib/index.js';
-const { AtomTrigger, useScrollPosition, useViewportSize } = await import(packageImport);
+const { AtomTrigger } = await import(packageImport);
 
 async function createRenderer(container) {
   if (ReactDOMClient && typeof ReactDOMClient.createRoot === 'function') {
@@ -163,101 +163,5 @@ async function runChildModeSmoke() {
   container.remove();
 }
 
-async function runHooksSmoke() {
-  const container = document.createElement('div');
-  document.body.appendChild(container);
-
-  function HooksHarness({ enabled }) {
-    const position = useScrollPosition({ throttleMs: 0, enabled });
-    const viewport = useViewportSize({ throttleMs: 0, enabled });
-
-    return React.createElement(
-      'output',
-      { id: 'hooks-output' },
-      `${position.x},${position.y}|${viewport.width},${viewport.height}`,
-    );
-  }
-
-  const renderer = await render(React.createElement(HooksHarness, { enabled: true }), container);
-  await waitForTick();
-
-  Object.defineProperty(window, 'scrollX', {
-    configurable: true,
-    value: 14,
-    writable: true,
-  });
-  Object.defineProperty(window, 'scrollY', {
-    configurable: true,
-    value: 28,
-    writable: true,
-  });
-  Object.defineProperty(window, 'innerWidth', {
-    configurable: true,
-    value: 1440,
-    writable: true,
-  });
-  Object.defineProperty(window, 'innerHeight', {
-    configurable: true,
-    value: 900,
-    writable: true,
-  });
-
-  window.dispatchEvent(new window.Event('scroll'));
-  window.dispatchEvent(new window.Event('resize'));
-  await waitForTick();
-
-  const output = container.querySelector('#hooks-output');
-  if (!(output instanceof HTMLElement)) {
-    throw new Error('Hooks smoke did not render output.');
-  }
-
-  if (output.textContent !== '14,28|1440,900') {
-    throw new Error(`Hooks smoke failed, got "${output.textContent}".`);
-  }
-
-  renderer.render(React.createElement(HooksHarness, { enabled: false }));
-  await waitForTick();
-
-  Object.defineProperty(window, 'scrollX', {
-    configurable: true,
-    value: 18,
-    writable: true,
-  });
-  Object.defineProperty(window, 'scrollY', {
-    configurable: true,
-    value: 32,
-    writable: true,
-  });
-  Object.defineProperty(window, 'innerWidth', {
-    configurable: true,
-    value: 1600,
-    writable: true,
-  });
-  Object.defineProperty(window, 'innerHeight', {
-    configurable: true,
-    value: 960,
-    writable: true,
-  });
-
-  window.dispatchEvent(new window.Event('scroll'));
-  window.dispatchEvent(new window.Event('resize'));
-  await waitForTick();
-
-  if (output.textContent !== '14,28|1440,900') {
-    throw new Error(`Hooks disabled smoke failed, got "${output.textContent}".`);
-  }
-
-  renderer.render(React.createElement(HooksHarness, { enabled: true }));
-  await waitForTick();
-
-  if (output.textContent !== '18,32|1600,960') {
-    throw new Error(`Hooks re-enable smoke failed, got "${output.textContent}".`);
-  }
-
-  await renderer.unmount();
-  container.remove();
-}
-
 await runAtomTriggerSmoke();
 await runChildModeSmoke();
-await runHooksSmoke();

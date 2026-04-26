@@ -36,16 +36,18 @@ The new version samples geometry internally, so some edge timing can feel a bit 
 
 ## Hook and type changes
 
-| v1.x                                   | v2.x                                          |
-| -------------------------------------- | --------------------------------------------- |
-| `useWindowScroll`                      | `useScrollPosition()`                         |
-| `useContainerScroll({ containerRef })` | `useScrollPosition({ target: containerRef })` |
-| `useWindowDimensions`                  | `useViewportSize()`                           |
-| `Options`                              | `ListenerOptions`                             |
-| `ScrollEvent`                          | removed                                       |
-| `Dimensions`                           | removed                                       |
-| `DebugInfo`                            | removed                                       |
-| `log`                                  | removed                                       |
+`v2.1` no longer exports scroll or viewport helper hooks. `AtomTrigger` does its own observation internally, so these hooks are not needed for normal trigger usage.
+
+| v1.x                                   | v2.1.x                                    |
+| -------------------------------------- | ----------------------------------------- |
+| `useWindowScroll`                      | removed, use your app's own scroll hook   |
+| `useContainerScroll({ containerRef })` | removed, use your app's own scroll hook   |
+| `useWindowDimensions`                  | removed, use your app's own viewport hook |
+| `Options`                              | removed                                   |
+| `ScrollEvent`                          | removed                                   |
+| `Dimensions`                           | removed                                   |
+| `DebugInfo`                            | removed                                   |
+| `log`                                  | removed                                   |
 
 ## Common upgrades
 
@@ -222,30 +224,6 @@ After migrating, please check it in the actual UI. `rootMargin` is the place whe
 />
 ```
 
-## Small hook examples
-
-### Replace `useWindowScroll`
-
-```tsx
-const position = useScrollPosition();
-console.log(position.y);
-```
-
-### Replace `useContainerScroll`
-
-```tsx
-const containerRef = React.useRef<HTMLDivElement>(null);
-const position = useScrollPosition({ target: containerRef });
-console.log(position.y);
-```
-
-### Replace `useWindowDimensions`
-
-```tsx
-const viewport = useViewportSize();
-console.log(viewport.height);
-```
-
 ## Final check
 
 Your migration is probably done when all of these are true:
@@ -253,5 +231,5 @@ Your migration is probably done when all of these are true:
 1. No `AtomTrigger` still passes `scrollEvent`, `dimensions`, `behavior`, `callback`, `getDebugInfo`, `triggerOnce` or `offset`.
 2. Trigger handlers now use `onEnter`, `onLeave` and/or `onEvent`.
 3. Custom containers use `root` or `rootRef`.
-4. Hook imports were moved to `useScrollPosition` and `useViewportSize`.
+4. Old helper hook imports were removed or replaced with hooks from your own codebase.
 5. You checked the real UI, not only TypeScript errors, especially around `threshold` and `rootMargin`.

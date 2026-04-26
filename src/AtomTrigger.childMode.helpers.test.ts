@@ -84,16 +84,16 @@ describe('AtomTrigger child mode helpers', () => {
     });
 
     it('warns when more than one top-level child is passed', () => {
-      expect(getInvalidChildWarning(true, 2, childElement)).toBe(warningMessages.invalidChildCount);
+      expect(getInvalidChildWarning(true, 2, childElement)).toBe('invalidChildCount');
     });
 
     it('warns when the child is not a React element', () => {
-      expect(getInvalidChildWarning(true, 1, null)).toBe(warningMessages.invalidChildElement);
+      expect(getInvalidChildWarning(true, 1, null)).toBe('invalidChildElement');
     });
 
     it('warns when the child is a fragment', () => {
       expect(getInvalidChildWarning(true, 1, React.createElement(React.Fragment))).toBe(
-        warningMessages.fragmentChild,
+        'fragmentChild',
       );
     });
 

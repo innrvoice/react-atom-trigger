@@ -9,10 +9,3 @@ export type {
   TriggerPosition,
   TriggerType,
 } from './AtomTrigger.types';
-export type {
-  ListenerOptions,
-  ScrollPosition,
-  UseScrollPositionOptions,
-  ViewportSize,
-} from './utils';
-export { useScrollPosition, useViewportSize } from './utils';
