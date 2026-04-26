@@ -9,6 +9,7 @@ export type HelicopterProps = {
   mode: AnimationMode;
   isActive: boolean;
   direction: AnimationTransitionDirection | null;
+  onFlightComplete?: () => void;
 };
 
 const phaseClassNames: Record<AnimationMode, string> = {
@@ -18,13 +19,22 @@ const phaseClassNames: Record<AnimationMode, string> = {
   night: styles.vehicleNight,
 };
 
-export function Helicopter({ mode, isActive, direction }: HelicopterProps) {
+export function Helicopter({ mode, isActive, direction, onFlightComplete }: HelicopterProps) {
   const isUpwardFlight = direction === 'up';
   const hasStarted = useRestartAnimation(isActive, direction);
+  const handleTransitionEnd = React.useCallback(
+    (event: React.TransitionEvent<HTMLDivElement>) => {
+      if (event.target === event.currentTarget && event.propertyName === 'transform') {
+        onFlightComplete?.();
+      }
+    },
+    [onFlightComplete],
+  );
 
   return (
     <div
       aria-hidden="true"
+      onTransitionEnd={handleTransitionEnd}
       className={classNames(
         styles.vehicle,
         styles.helicopter,
