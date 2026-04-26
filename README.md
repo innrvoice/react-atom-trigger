@@ -3,8 +3,20 @@
 [![codecov](https://codecov.io/gh/innrvoice/react-atom-trigger/branch/master/graph/badge.svg)](https://codecov.io/gh/innrvoice/react-atom-trigger)
 [![bundle size](https://codecov.io/github/innrvoice/react-atom-trigger/branch/master/graph/bundle/react-atom-trigger-esm/badge.svg)](https://app.codecov.io/github/innrvoice/react-atom-trigger/bundles/master/react-atom-trigger-esm)
 
-`react-atom-trigger` helps with the usual "run some code when this thing enters or leaves view" problem.
-It is a lightweight React alternative to `react-waypoint`, written in TypeScript.
+`react-atom-trigger` helps with the usual "run some code when this thing enters or leaves view" problem in React.
+
+It is designed for scroll-triggered UI and viewport-based interactions, focusing on predictable enter/leave behavior in real layouts where scroll, resize and layout shifts all affect visibility.
+
+It is a lightweight React alternative to `react-waypoint`.
+
+It can also be used as a higher-level alternative to React Intersection Observer based solutions when you need more predictable scroll-trigger behavior.
+
+## Typical use cases
+
+- scroll-driven UI (sticky headers, scene transitions)
+- triggering animations with precise timing
+- layouts with dynamic content or frequent reflows
+- containers with custom scroll roots
 
 ## Breaking changes
 
@@ -50,7 +62,7 @@ The public React compatibility contract for `v2` is the published peer range: Re
 `react-atom-trigger` uses a mixed approach.
 
 - Geometry is the real source of truth for `enter` and `leave`.
-- `IntersectionObserver` is only there to wake things up when the browser notices a nearby layout shift.
+- `IntersectionObserver` is only there to wake things up when the browser notices a nearby layout shift. You can think of it as: IntersectionObserver wakes things up, geometry decides what actually happened.
 - `rootMargin` logic is handled by the library itself, so it stays consistent and does not depend on native observer quirks.
 
 In practice this means `AtomTrigger` reacts to:
@@ -61,7 +73,28 @@ In practice this means `AtomTrigger` reacts to:
 - sentinel resize
 - nearby layout shifts that move the observed element even if no scroll event happened
 
-This is the main reason `v2` can support custom margin-aware behavior and still react to browser-driven layout changes.
+This allows it to support margin-aware behavior while still reacting to browser-driven changes.
+
+## When to use vs react-intersection-observer
+
+`react-intersection-observer` is a lightweight React wrapper around the browser’s IntersectionObserver API.
+
+It is a great fit when:
+
+- you only need to know if something is visible
+- async observer timing is acceptable
+- you want a simple hook like `useInView`
+
+However, IntersectionObserver is designed as an asynchronous visibility signal managed by the browser. It does not provide exact geometry-based control over enter/leave transitions.
+
+In fast scroll or layout-heavy UIs, this can lead to missed intermediate states or non-intuitive enter/leave timing.
+
+Use `react-atom-trigger` when:
+
+- you need predictable enter/leave behavior
+- layout shifts should be handled consistently
+- margins and thresholds must behave the same across cases
+- visibility should be derived from actual element geometry rather than observer callbacks
 
 ## Quick start
 

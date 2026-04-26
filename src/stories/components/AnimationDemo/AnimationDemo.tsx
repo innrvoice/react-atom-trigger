@@ -16,6 +16,7 @@ import {
 } from './AnimationDemo.state';
 import { createJumpEvent, getTargetScrollTop, scrollRootToPosition } from './AnimationDemo.utils';
 import type {
+  AircraftAnimation,
   AnimationMode,
   AnimationTransition,
   AnimationTransitionDirection,
@@ -29,6 +30,26 @@ export type AnimationDemoProps = {
   scrollBehavior?: ScrollBehavior;
   onModeChange?: (mode: AnimationMode, event: AtomTriggerEvent) => void;
 };
+
+type FlightAircraft = Extract<AircraftAnimation, 'plane' | 'helicopter'>;
+
+type ActiveFlight = {
+  id: number;
+  aircraft: FlightAircraft;
+  direction: AnimationTransitionDirection;
+};
+
+function getFlightAircraft(activeAircraft: AircraftAnimation): FlightAircraft[] {
+  if (activeAircraft === 'both') {
+    return ['plane', 'helicopter'];
+  }
+
+  if (activeAircraft === 'plane' || activeAircraft === 'helicopter') {
+    return [activeAircraft];
+  }
+
+  return [];
+}
 
 export function AnimationDemo({
   initialMode = 'day',
@@ -45,6 +66,9 @@ export function AnimationDemo({
   });
   const [showTriggers, setShowTriggers] = React.useState(defaultShowTriggers);
   const [state, dispatch] = React.useReducer(animationDemoReducer, initialMode, createInitialState);
+  const [activeFlights, setActiveFlights] = React.useState<ActiveFlight[]>([]);
+  const nextFlightIdRef = React.useRef(0);
+  const queuedTransitionCountRef = React.useRef(0);
   const previousModeRef = React.useRef(state.mode);
   const pendingJumpRef = React.useRef<{
     triggerId: AnimationTriggerId;
@@ -67,6 +91,37 @@ export function AnimationDemo({
     onModeChange?.(state.mode, state.lastEvent);
     previousModeRef.current = state.mode;
   }, [onModeChange, state.lastEvent, state.mode]);
+
+  React.useEffect(() => {
+    const transitionDirection = state.transitionDirection;
+
+    if (
+      state.transitionCount === 0 ||
+      state.transitionCount === queuedTransitionCountRef.current ||
+      !transitionDirection
+    ) {
+      return;
+    }
+
+    queuedTransitionCountRef.current = state.transitionCount;
+    const flightAircraft = getFlightAircraft(state.activeAircraft);
+    if (flightAircraft.length === 0) {
+      return;
+    }
+
+    setActiveFlights(currentFlights => [
+      ...currentFlights,
+      ...flightAircraft.map(aircraft => {
+        const flight: ActiveFlight = {
+          id: nextFlightIdRef.current,
+          aircraft,
+          direction: transitionDirection,
+        };
+        nextFlightIdRef.current += 1;
+        return flight;
+      }),
+    ]);
+  }, [state.activeAircraft, state.mode, state.transitionCount, state.transitionDirection]);
 
   const dispatchTransition = React.useCallback(
     (
@@ -146,10 +201,13 @@ export function AnimationDemo({
       type: 'reset',
       mode: initialMode,
     });
+    setActiveFlights([]);
+    queuedTransitionCountRef.current = 0;
   }, [initialMode, scrollBehavior]);
 
-  const planeActive = state.activeAircraft === 'plane' || state.activeAircraft === 'both';
-  const helicopterActive = state.activeAircraft === 'helicopter' || state.activeAircraft === 'both';
+  const removeFlight = React.useCallback((flightId: number) => {
+    setActiveFlights(currentFlights => currentFlights.filter(flight => flight.id !== flightId));
+  }, []);
   const scrollHint = scrollHintsByMode[state.mode];
 
   return (
@@ -181,22 +239,25 @@ export function AnimationDemo({
       <div className={styles.viewport} data-testid="animation-demo-viewport">
         <div className={styles.stage}>
           <Scene mode={state.mode} />
-          <Plane
-            key={planeActive ? `plane-${state.transitionCount}` : `plane-idle-${state.mode}`}
-            mode={state.mode}
-            isActive={planeActive}
-            direction={state.transitionDirection}
-          />
-          <Helicopter
-            key={
-              helicopterActive
-                ? `helicopter-${state.transitionCount}`
-                : `helicopter-idle-${state.mode}`
-            }
-            mode={state.mode}
-            isActive={helicopterActive}
-            direction={state.transitionDirection}
-          />
+          {activeFlights.map(flight =>
+            flight.aircraft === 'plane' ? (
+              <Plane
+                key={flight.id}
+                mode={state.mode}
+                isActive
+                direction={flight.direction}
+                onFlightComplete={() => removeFlight(flight.id)}
+              />
+            ) : (
+              <Helicopter
+                key={flight.id}
+                mode={state.mode}
+                isActive
+                direction={flight.direction}
+                onFlightComplete={() => removeFlight(flight.id)}
+              />
+            ),
+          )}
           <div className={styles.scrollHint} aria-live="polite" aria-atomic="true">
             <span key={scrollHint} className={styles.scrollHintText}>
               {scrollHint}

@@ -160,18 +160,6 @@ function clampThreshold(value: number): number {
 }
 
 export function normalizeThreshold(threshold: unknown): number {
-  if (Array.isArray(threshold)) {
-    if (process.env.NODE_ENV === 'development') {
-      warnOnce(
-        '[react-atom-trigger] `threshold` expects a single number in v2. Using the first finite numeric entry.',
-      );
-    }
-    const firstNumeric = threshold.find(
-      (value): value is number => typeof value === 'number' && Number.isFinite(value),
-    );
-    return clampThreshold(firstNumeric ?? 0);
-  }
-
   if (threshold === null || threshold === undefined) {
     return 0;
   }

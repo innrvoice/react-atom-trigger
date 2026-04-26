@@ -147,16 +147,6 @@ describe('AtomTrigger geometry helpers', () => {
   });
 
   describe('normalizeThreshold', () => {
-    it('uses the first finite entry from array input', () => {
-      process.env.NODE_ENV = 'development';
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      expect(normalizeThreshold([Number.NaN, 0.25])).toBe(0.25);
-      expect(warn).toHaveBeenCalledWith(
-        '[react-atom-trigger] `threshold` expects a single number in v2. Using the first finite numeric entry.',
-      );
-    });
-
     it('falls back to 0 for nullish values', () => {
       expect(normalizeThreshold(null)).toBe(0);
       expect(normalizeThreshold(undefined)).toBe(0);
@@ -167,6 +157,7 @@ describe('AtomTrigger geometry helpers', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       expect(normalizeThreshold('nope')).toBe(0);
+      expect(normalizeThreshold([Number.NaN, 0.25])).toBe(0);
       expect(warn).toHaveBeenCalledWith(
         '[react-atom-trigger] `threshold` must be a finite number between 0 and 1. Falling back to 0.',
       );
@@ -187,9 +178,8 @@ describe('AtomTrigger geometry helpers', () => {
       process.env.NODE_ENV = 'production';
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      expect(normalizeThreshold([Number.NaN, 0.25])).toBe(0.25);
-      expect(normalizeThreshold([Number.NaN])).toBe(0);
       expect(normalizeThreshold('nope')).toBe(0);
+      expect(normalizeThreshold([Number.NaN, 0.25])).toBe(0);
       expect(normalizeThreshold(1.5)).toBe(1);
       expect(warn).not.toHaveBeenCalled();
     });

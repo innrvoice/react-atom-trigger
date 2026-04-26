@@ -1,15 +1,22 @@
 {
   "name": "react-atom-trigger",
   "version": "2.1.0",
-  "description": "Geometry-based scroll trigger for React with precise enter/leave control. A modern alternative to react-waypoint.",
+  "description": "Geometry-based scroll trigger for React with predictable enter/leave behavior. A modern alternative to react-waypoint and React Intersection Observer solutions.",
   "keywords": [
-    "intersection",
-    "observer",
-    "on-scroll",
+    "element visibility",
+    "in view",
+    "intersection observer",
     "react",
+    "react intersection observer",
+    "react waypoint alternative",
     "scroll",
-    "scroll-into-view",
-    "v2"
+    "scroll animation",
+    "scroll detection",
+    "scroll trigger",
+    "scroll-trigger",
+    "viewport",
+    "visibility",
+    "waypoint"
   ],
   "homepage": "https://atomtrigger.dev",
   "bugs": {

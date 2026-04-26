@@ -299,6 +299,12 @@
   will-change: transform, filter, opacity;
 }
 
+.vehicleImage {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .vehicleIdle {
   opacity: 0;
 }
