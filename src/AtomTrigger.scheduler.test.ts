@@ -1,6 +1,10 @@
 import { fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { registerSentinel, type SentinelRegistration } from './AtomTrigger.scheduler';
+import {
+  getNextSampleCause,
+  registerSentinel,
+  type SentinelRegistration,
+} from './AtomTrigger.scheduler';
 import { resolveSchedulerTarget } from './AtomTrigger.root';
 import { resetObservationState } from './AtomTrigger.sampling';
 import { finishDomTestRun, prepareDomTestRun, setNodeEnv, setRect } from './AtomTrigger.testUtils';
@@ -312,6 +316,12 @@ describe('AtomTrigger scheduler helpers', () => {
     expect(onEnter).toHaveBeenCalledTimes(1);
 
     dispose();
+  });
+
+  it('keeps the strongest queued sample cause for the next animation frame', () => {
+    expect(getNextSampleCause('geometry-change', 'root-change')).toBe('root-change');
+    expect(getNextSampleCause('root-change', 'scroll')).toBe('scroll');
+    expect(getNextSampleCause('scroll', 'geometry-change')).toBe('scroll');
   });
 
   it('ignores a late animation frame after the last sentinel is disposed', () => {

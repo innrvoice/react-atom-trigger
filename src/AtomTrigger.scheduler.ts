@@ -32,6 +32,8 @@ type RootScheduler = {
   cleanup: () => void;
 };
 
+type RootSchedulerState = Omit<RootScheduler, 'queueSample' | 'cleanup'>;
+
 const rootSchedulers = new WeakMap<SchedulerTarget, RootScheduler>();
 
 function createViewportRootBounds(): DOMRectReadOnly {
@@ -42,16 +44,33 @@ function isWindowTarget(target: SchedulerTarget): target is Window {
   return target === window || isWindowLike(target);
 }
 
+export function getNextSampleCause(
+  current: SampleCause | null,
+  incoming: SampleCause,
+): SampleCause {
+  if (current === null) {
+    return incoming;
+  }
+
+  if (current === 'geometry-change' && incoming !== 'geometry-change') {
+    return incoming;
+  }
+
+  if (current === 'root-change' && incoming === 'scroll') {
+    return incoming;
+  }
+
+  return current;
+}
+
 function createRootScheduler(target: SchedulerTarget): RootScheduler {
-  const scheduler: RootScheduler = {
+  const scheduler: RootSchedulerState = {
     registrations: new Set<SentinelRegistration>(),
     rafId: 0,
     pendingSampleCause: null,
     previousBaseRootBounds: null,
     resizeObserver: null,
     intersectionObserver: null,
-    queueSample: () => {},
-    cleanup: () => {},
   };
 
   const flushSamples = () => {
@@ -87,13 +106,7 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
   };
 
   const queueSample = (cause: SampleCause = 'geometry-change') => {
-    if (
-      scheduler.pendingSampleCause === null ||
-      (scheduler.pendingSampleCause === 'geometry-change' && cause !== 'geometry-change') ||
-      (scheduler.pendingSampleCause === 'root-change' && cause === 'scroll')
-    ) {
-      scheduler.pendingSampleCause = cause;
-    }
+    scheduler.pendingSampleCause = getNextSampleCause(scheduler.pendingSampleCause, cause);
 
     if (scheduler.rafId !== 0) {
       return;
@@ -139,8 +152,7 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
     );
   }
 
-  scheduler.queueSample = queueSample;
-  scheduler.cleanup = () => {
+  const cleanup = () => {
     if (scheduler.rafId !== 0) {
       cancelAnimationFrame(scheduler.rafId);
       scheduler.rafId = 0;
@@ -154,7 +166,7 @@ function createRootScheduler(target: SchedulerTarget): RootScheduler {
     scheduler.previousBaseRootBounds = null;
   };
 
-  return scheduler;
+  return Object.assign(scheduler, { queueSample, cleanup });
 }
 
 function getOrCreateRootScheduler(target: SchedulerTarget): RootScheduler {

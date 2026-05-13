@@ -220,6 +220,16 @@ describe('AtomTrigger child mode', () => {
     expect(warn.mock.calls.filter(([warning]) => warning === message)).toHaveLength(1);
   });
 
+  it('treats boolean children as empty sentinel mode instead of invalid child mode', () => {
+    setNodeEnv('development');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const view = render(<AtomTrigger className="atom-trigger-sentinel">{false}</AtomTrigger>);
+
+    expect(view.container.querySelector('.atom-trigger-sentinel')).toBeInstanceOf(HTMLDivElement);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('cleans up child observation when a previously observed child stops exposing a DOM node', async () => {
     const onEnter = vi.fn();
     const rootRef = React.createRef<HTMLDivElement>();
