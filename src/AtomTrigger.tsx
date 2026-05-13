@@ -45,12 +45,13 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
   const normalizedRootMargin = normalizeRootMargin(rootMargin);
   const normalizedThreshold = normalizeThreshold(threshold);
 
-  const hasObservedChild = children !== null && children !== undefined;
+  const usesChildObservation =
+    children !== null && children !== undefined && typeof children !== 'boolean';
   const childCount = React.Children.count(children);
   const singleChildElement = childCount === 1 && React.isValidElement(children) ? children : null;
 
   const invalidChildWarning = getInvalidChildWarning(
-    hasObservedChild,
+    usesChildObservation,
     childCount,
     singleChildElement,
   );
@@ -62,16 +63,16 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
   const originalChildRef = getElementRef(childElementWithRef);
   const { childNode, attachObservedChildRef } = useObservedChildNode({
     originalChildRef,
-    hasObservedChild,
+    hasObservedChild: usesChildObservation,
     invalidChildWarning,
     shouldWarnAboutMissingDomRef: childElementWithRef !== null,
   });
 
   React.useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && hasObservedChild && className) {
+    if (process.env.NODE_ENV === 'development' && usesChildObservation && className) {
       warnOnce(getWarningMessage('childModeClassName'));
     }
-  }, [className, hasObservedChild]);
+  }, [className, usesChildObservation]);
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development' && invalidChildWarning) {
@@ -99,7 +100,7 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
       return;
     }
 
-    const node = hasObservedChild ? childNode : sentinelRef.current;
+    const node = usesChildObservation ? childNode : sentinelRef.current;
     const targetSource: SchedulerTargetSource =
       rootRef !== undefined
         ? { kind: 'rootRef', target: trackedRootRefTarget }
@@ -159,7 +160,7 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
     root,
     rootRef,
     trackedRootRefTarget,
-    hasObservedChild,
+    usesChildObservation,
   ]);
 
   React.useEffect(
@@ -174,7 +175,7 @@ const AtomTrigger: React.FC<AtomTriggerProps> = ({
     [],
   );
 
-  if (!hasObservedChild) {
+  if (!usesChildObservation) {
     return <div ref={sentinelRef} style={defaultSentinelStyle} className={className} />;
   }
 

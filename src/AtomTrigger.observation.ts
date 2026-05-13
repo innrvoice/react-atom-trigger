@@ -22,6 +22,12 @@ export type SubscriptionSnapshot = ObservationConfig & {
   target: SchedulerTarget;
 };
 
+export type ObservationSubscriptionInput = Omit<ObservationConfig, 'node'> & {
+  disabled: boolean;
+  node: Element | null;
+  target: SchedulerTarget | null;
+};
+
 export type ObservationState = {
   registration: SentinelRegistration;
   subscription: SubscriptionSnapshot | null;
@@ -50,6 +56,29 @@ function clearObservationSubscription(observation: ObservationState): void {
   observation.subscription = null;
 }
 
+function applyObservationConfig(
+  registration: SentinelRegistration,
+  config: ObservationConfig,
+): void {
+  Object.assign(registration, config);
+}
+
+function isSameSubscription(
+  current: SubscriptionSnapshot | null,
+  next: SubscriptionSnapshot,
+): boolean {
+  return (
+    current !== null &&
+    current.node === next.node &&
+    current.target === next.target &&
+    current.rootMargin === next.rootMargin &&
+    current.threshold === next.threshold &&
+    current.once === next.once &&
+    current.oncePerDirection === next.oncePerDirection &&
+    current.fireOnInitialVisible === next.fireOnInitialVisible
+  );
+}
+
 export function createObservationState(
   config: ObservationConfig,
   callbacks: ObservationCallbacks,
@@ -72,16 +101,7 @@ export function updateObservationCallbacks(
 
 export function syncObservationSubscription(
   observation: ObservationState,
-  input: {
-    disabled: boolean;
-    node: Element | null;
-    target: SchedulerTarget | null;
-    rootMargin: string;
-    threshold: number;
-    once: boolean;
-    oncePerDirection: boolean;
-    fireOnInitialVisible: boolean;
-  },
+  input: ObservationSubscriptionInput,
 ): void {
   const registration = observation.registration;
 
@@ -102,7 +122,7 @@ export function syncObservationSubscription(
 
   if (input.disabled || !input.target) {
     clearObservationSubscription(observation);
-    Object.assign(registration, nextConfig);
+    applyObservationConfig(registration, nextConfig);
     resetObservationState(registration);
     return;
   }
@@ -112,24 +132,14 @@ export function syncObservationSubscription(
     target: input.target,
   };
 
-  const subscriptionUnchanged =
-    observation.subscription !== null &&
-    observation.subscription.node === nextSubscription.node &&
-    observation.subscription.target === nextSubscription.target &&
-    observation.subscription.rootMargin === nextSubscription.rootMargin &&
-    observation.subscription.threshold === nextSubscription.threshold &&
-    observation.subscription.once === nextSubscription.once &&
-    observation.subscription.oncePerDirection === nextSubscription.oncePerDirection &&
-    observation.subscription.fireOnInitialVisible === nextSubscription.fireOnInitialVisible;
-
-  if (subscriptionUnchanged) {
-    Object.assign(registration, nextConfig);
+  if (isSameSubscription(observation.subscription, nextSubscription)) {
+    applyObservationConfig(registration, nextConfig);
     return;
   }
 
   resetObservationState(registration);
   clearObservationSubscription(observation);
-  Object.assign(registration, nextConfig);
+  applyObservationConfig(registration, nextConfig);
   observation.unsubscribe = registerSentinel(input.target, registration);
   observation.subscription = nextSubscription;
 }

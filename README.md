@@ -295,7 +295,7 @@ pnpm storybook
 ```
 
 The latest Storybook build for `react-atom-trigger` is also available at
-[storybook.atomtrigger.dev](https://storybook.atomtrigger.dev/).
+[sb.atomtrigger.visiofutura.com](https://sb.atomtrigger.visiofutura.com/).
 
 ### CodeSandbox
 
