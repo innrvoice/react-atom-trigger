@@ -16,7 +16,7 @@ type SentinelInteractionStoryArgs = InteractionHarnessProps & {
 
 const meta: Meta<SentinelInteractionStoryArgs> = {
   title: 'Internal Tests/AtomTrigger Interactions/Sentinel Mode',
-  tags: ['!autodocs'],
+  tags: ['!dev', '!autodocs'],
   parameters: {
     layout: 'padded',
     controls: {

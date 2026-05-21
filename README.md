@@ -306,6 +306,13 @@ Quick way to tweak it in the browser.
 - [Fixed header offset example](https://codesandbox.io/p/devbox/react-atom-trigger-v2-fixed-header-offset-62lmrv)
 - [Initial visible on load example](https://codesandbox.io/p/devbox/react-atom-trigger-v2-initial-visible-on-load-ncqjtf)
 - [Horizontal scroll container example](https://codesandbox.io/p/devbox/react-atom-trigger-v2-horizontal-scroll-container-hs33gq)
+- [Layout shift without scroll](https://codesandbox.io/p/sandbox/react-atom-trigger-v2-layout-shift-without-scroll-n5h7mc)
+
+## Security / SBOM
+
+Tagged releases publish a CycloneDX SBOM generated from the pnpm lockfile.
+
+Security and compliance tooling can use the SBOM to inspect dependency metadata.
 
 ## Development
 

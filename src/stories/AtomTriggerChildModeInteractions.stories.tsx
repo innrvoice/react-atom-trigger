@@ -10,7 +10,7 @@ import { atomTriggerActionArgs, atomTriggerArgTypes } from './storybookArgs';
 const meta: Meta<ChildModeInteractionHarnessProps> = {
   title: 'Internal Tests/AtomTrigger Interactions/Child Mode',
   component: ChildModeInteractionHarness,
-  tags: ['!autodocs'],
+  tags: ['!dev', '!autodocs'],
   parameters: {
     layout: 'padded',
     controls: {

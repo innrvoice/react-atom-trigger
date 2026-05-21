@@ -7,7 +7,7 @@ import { animationDemoActionArgs, animationDemoArgTypes } from './storybookArgs'
 const meta: Meta<typeof AnimationDemo> = {
   title: 'Internal Tests/Extended Demo Interactions',
   component: AnimationDemo,
-  tags: ['!autodocs'],
+  tags: ['!dev', '!autodocs'],
   parameters: {
     layout: 'fullscreen',
     controls: {
