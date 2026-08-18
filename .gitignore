@@ -11,3 +11,5 @@ debug-storybook.log
 *storybook.log
 storybook-static
 coverage
+AGENTS.md
+CONTINUITY.md
