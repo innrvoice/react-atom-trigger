@@ -1,0 +1,64 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+
+	servers {
+		trusted_proxies static private_ranges 100.0.0.0/8
+		trusted_proxies_strict
+	}
+}
+
+:{$PORT:3000} {
+	log {
+		format json
+	}
+
+	header {
+		Content-Security-Policy "frame-ancestors 'self';"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		-Server
+	}
+
+	@health {
+		method GET HEAD
+		path /health
+	}
+	handle @health {
+		header {
+			Cache-Control "no-store"
+			Content-Type "text/plain; charset=utf-8"
+		}
+		respond "ok" 200
+	}
+
+	@unsupportedMethod not method GET HEAD
+	handle @unsupportedMethod {
+		header Cache-Control "no-store"
+		respond "Not found" 404
+	}
+
+	handle {
+		route {
+			root * /srv
+			encode zstd gzip
+
+			header Cache-Control "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
+
+			@immutable path /assets/*
+			header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+			@root path /
+			rewrite @root /index.html
+
+			@notFound not file
+			header @notFound Cache-Control "no-store"
+			respond @notFound "Not found" 404
+
+			file_server
+		}
+	}
+}

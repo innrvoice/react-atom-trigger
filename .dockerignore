@@ -1,0 +1,17 @@
+.git
+.githooks
+.github
+.DS_Store
+.env
+.env.*
+node_modules
+.pnpm-store
+.npm-cache
+lib
+storybook-static
+coverage
+test-results
+playwright-report
+*.log
+AGENTS.md
+CONTINUITY.md
